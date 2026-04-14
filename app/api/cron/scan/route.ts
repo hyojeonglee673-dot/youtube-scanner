@@ -1,7 +1,17 @@
 import { scanAllChannels } from '../../../../lib/scanner'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET() {
+function isAuthorized(req: NextRequest) {
+  const authHeader = req.headers.get('authorization')
+  const expected = `Bearer ${process.env.CRON_SECRET}`
+  return authHeader === expected
+}
+
+export async function GET(req: NextRequest) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const result = await scanAllChannels()
     return NextResponse.json({ ok: true, result })
@@ -13,7 +23,11 @@ export async function GET() {
   }
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const result = await scanAllChannels()
     return NextResponse.json({ ok: true, result })
