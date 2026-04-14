@@ -31,7 +31,7 @@ export default function VideoTable({ videos }: Props) {
 
   return (
     <div style={listStyle}>
-      {videos.slice(0, 10).map((video) => (
+      {videos.map((video) => (
         <article key={video.video_id} style={itemStyle}>
           <div style={thumbWrapStyle}>
             {video.thumbnail_url ? (

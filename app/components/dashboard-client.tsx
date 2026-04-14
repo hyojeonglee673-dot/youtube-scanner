@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
-import ScannerControls from './scanner-controls'
 import Sidebar from './sidebar'
+import ScannerControls from './scanner-controls'
 import VideoTable from './video-table'
 
 type ChannelItem = {
@@ -22,33 +22,79 @@ type VideoItem = {
   published_at: string | null
 }
 
+type UserSettings = {
+  videoLimit: number
+  highlightCards: boolean
+  recentFirst: boolean
+}
+
+const SETTINGS_KEY = 'yt-scanner-settings-v1'
+
+const defaultSettings: UserSettings = {
+  videoLimit: 10,
+  highlightCards: true,
+  recentFirst: true,
+}
+
+function getStoredSettings(): UserSettings {
+  if (typeof window === 'undefined') return defaultSettings
+
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_KEY)
+    if (!raw) return defaultSettings
+
+    const parsed = JSON.parse(raw)
+
+    return {
+      videoLimit:
+        typeof parsed.videoLimit === 'number' && parsed.videoLimit > 0
+          ? parsed.videoLimit
+          : defaultSettings.videoLimit,
+      highlightCards:
+        typeof parsed.highlightCards === 'boolean'
+          ? parsed.highlightCards
+          : defaultSettings.highlightCards,
+      recentFirst:
+        typeof parsed.recentFirst === 'boolean'
+          ? parsed.recentFirst
+          : defaultSettings.recentFirst,
+    }
+  } catch {
+    return defaultSettings
+  }
+}
+
 function formatDate(value: string | null) {
-  if (!value) return '-'
-  return new Date(value).toLocaleString('ko-KR')
+  return value ? new Date(value).toLocaleString('ko-KR') : '-'
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat('ko-KR').format(value || 0)
 }
 
 function getLatestScan(channels: ChannelItem[]) {
   const times = channels
-    .map((c) => c.last_scanned_at)
+    .map((channel) => channel.last_scanned_at)
     .filter(Boolean)
-    .map((v) => new Date(v as string).getTime())
-    .filter((v) => !Number.isNaN(v))
+    .map((value) => new Date(value as string).getTime())
+    .filter((value) => !Number.isNaN(value))
 
-  if (times.length === 0) return '-'
-  return new Date(Math.max(...times)).toLocaleString('ko-KR')
+  return times.length === 0 ? '-' : new Date(Math.max(...times)).toLocaleString('ko-KR')
 }
 
 function StatCard({
   label,
   value,
   helper,
+  highlighted,
 }: {
   label: string
   value: string
   helper: string
+  highlighted: boolean
 }) {
   return (
-    <div style={statCardStyle}>
+    <div style={{ ...statCardStyle, ...(highlighted ? statCardStrongStyle : {}) }}>
       <div style={statLabelStyle}>{label}</div>
       <div style={statValueStyle}>{value}</div>
       <div style={statHelperStyle}>{helper}</div>
@@ -59,8 +105,8 @@ function StatCard({
 function StatusRow({ label, value }: { label: string; value: string }) {
   return (
     <div style={statusRowStyle}>
-      <span style={mutedStyle}>{label}</span>
-      <strong>{value}</strong>
+      <span style={statusLabelStyle}>{label}</span>
+      <strong style={statusValueStyle}>{value}</strong>
     </div>
   )
 }
@@ -70,6 +116,7 @@ export default function DashboardClient() {
   const [videos, setVideos] = useState<VideoItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [settings, setSettings] = useState<UserSettings>(defaultSettings)
 
   const refreshDashboard = useCallback(async () => {
     try {
@@ -95,19 +142,36 @@ export default function DashboardClient() {
   }, [])
 
   useEffect(() => {
+    setSettings(getStoredSettings())
     refreshDashboard()
   }, [refreshDashboard])
 
   const stats = useMemo(() => {
-    const scannedChannels = channels.filter((c) => c.last_scanned_at).length
+    const scannedChannels = channels.filter((channel) => channel.last_scanned_at).length
+    const totalViews = videos.reduce((sum, video) => sum + (video.view_count || 0), 0)
 
     return {
       totalChannels: channels.length,
       scannedChannels,
       totalVideos: videos.length,
+      totalViews,
       latestScan: getLatestScan(channels),
     }
   }, [channels, videos])
+
+  const displayVideos = useMemo(() => {
+    const sorted = [...videos].sort((a, b) => {
+      if (settings.recentFirst) {
+        const aTime = a.published_at ? new Date(a.published_at).getTime() : 0
+        const bTime = b.published_at ? new Date(b.published_at).getTime() : 0
+        return bTime - aTime
+      }
+
+      return (b.view_count || 0) - (a.view_count || 0)
+    })
+
+    return sorted.slice(0, settings.videoLimit)
+  }, [videos, settings])
 
   return (
     <div style={shellStyle}>
@@ -119,8 +183,18 @@ export default function DashboardClient() {
             <div style={eyebrowStyle}>OVERVIEW DASHBOARD</div>
             <h1 style={titleStyle}>YouTube Scanner Control Center</h1>
             <p style={subtitleStyle}>
-              등록된 채널, 최근 스캔 시각, 수집된 영상을 한눈에 보는 운영 대시보드입니다.
+              등록된 채널, 최근 스캔 시각, 수집된 영상 흐름을 한눈에 보는 운영 대시보드입니다.
             </p>
+
+            <div style={heroChipRowStyle}>
+              <span style={heroChipStyle}>최근 영상 {settings.videoLimit}개 표시</span>
+              <span style={heroChipStyle}>
+                {settings.recentFirst ? '최신순 정렬' : '조회수순 정렬'}
+              </span>
+              <span style={heroChipStyle}>
+                카드 강조 {settings.highlightCards ? 'ON' : 'OFF'}
+              </span>
+            </div>
           </div>
 
           <button type="button" onClick={refreshDashboard} style={refreshButtonStyle}>
@@ -135,92 +209,106 @@ export default function DashboardClient() {
             label="등록 채널"
             value={loading ? '...' : String(stats.totalChannels)}
             helper="현재 추적 중인 채널 수"
+            highlighted={settings.highlightCards}
           />
           <StatCard
             label="스캔 완료 채널"
             value={loading ? '...' : String(stats.scannedChannels)}
             helper="최근 스캔 기록이 있는 채널"
+            highlighted={settings.highlightCards}
           />
           <StatCard
             label="수집된 영상"
             value={loading ? '...' : String(stats.totalVideos)}
-            helper="현재 화면에 표시되는 영상 수"
+            helper="현재 저장된 전체 영상 수"
+            highlighted={settings.highlightCards}
           />
           <StatCard
-            label="최근 스캔 시각"
-            value={loading ? '...' : stats.latestScan}
-            helper="가장 마지막으로 스캔된 시간"
+            label="누적 조회수"
+            value={loading ? '...' : formatNumber(stats.totalViews)}
+            helper="수집된 영상 기준 조회수 합계"
+            highlighted={settings.highlightCards}
           />
         </section>
 
         <section style={topGridStyle}>
-          <div style={cardStyle}>
-            <div style={cardHeaderStyle}>
+          <div
+            style={{
+              ...cardStyle,
+              ...(settings.highlightCards ? cardStrongStyle : {}),
+            }}
+          >
+            <div style={sectionHeaderStyle}>
               <div>
-                <div style={cardEyebrowStyle}>SYSTEM STATUS</div>
-                <h2 style={cardTitleStyle}>운영 상태</h2>
+                <div style={sectionEyebrowStyle}>SYSTEM STATUS</div>
+                <h2 style={sectionTitleStyle}>운영 상태</h2>
               </div>
+
               <span style={liveBadgeStyle}>LIVE</span>
             </div>
 
-            <div style={statusChartStyle}>
-              {[35, 55, 45, 80, 65, 50, 90, 60].map((h, i) => (
-                <div
-                  key={i}
-                  style={{
-                    ...barStyle,
-                    height: `${h}%`,
-                    opacity: i === 3 || i === 6 ? 1 : 0.55,
-                  }}
-                />
-              ))}
-            </div>
+            <div style={statusPanelStyle}>
+              <div style={bubbleChartWrapStyle}>
+                {[36, 62, 48, 84, 56, 44, 72, 58].map((size, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      ...bubbleStyle,
+                      width: size,
+                      height: size,
+                      opacity: index === 3 || index === 6 ? 1 : 0.58,
+                    }}
+                  />
+                ))}
+              </div>
 
-            <div style={statusListStyle}>
-              <StatusRow label="현재 상태" value={loading ? '확인 중' : '정상 운영'} />
-              <StatusRow label="최근 스캔" value={loading ? '...' : stats.latestScan} />
-              <StatusRow
-                label="채널 커버리지"
-                value={loading ? '...' : `${stats.scannedChannels}/${stats.totalChannels}`}
-              />
+              <div style={statusListStyle}>
+                <StatusRow label="현재 상태" value={loading ? '확인 중...' : '정상 운영'} />
+                <StatusRow label="최근 스캔" value={loading ? '...' : stats.latestScan} />
+                <StatusRow
+                  label="채널 커버리지"
+                  value={loading ? '...' : `${stats.scannedChannels}/${stats.totalChannels}`}
+                />
+              </div>
             </div>
           </div>
 
-          <div style={cardStyle}>
-            <div style={cardHeaderStyle}>
+          <div
+            style={{
+              ...cardStyle,
+              ...(settings.highlightCards ? cardStrongStyle : {}),
+            }}
+          >
+            <div style={sectionHeaderStyle}>
               <div>
-                <div style={cardEyebrowStyle}>QUICK ACTIONS</div>
-                <h2 style={cardTitleStyle}>빠른 실행</h2>
+                <div style={sectionEyebrowStyle}>QUICK ACTIONS</div>
+                <h2 style={sectionTitleStyle}>빠른 실행</h2>
               </div>
             </div>
 
             <div style={{ marginTop: 16 }}>
               <ScannerControls onDone={refreshDashboard} />
             </div>
-
-            <div style={darkNoteStyle}>
-              <div style={{ fontWeight: 800, marginBottom: 8 }}>운영 메모</div>
-              <ul style={noteListStyle}>
-                <li>자동 스캔 동작은 최근 스캔 시각으로 확인</li>
-                <li>새 영상 반영 여부는 아래 영상 목록에서 확인</li>
-                <li>문제가 있으면 먼저 새로고침으로 재조회</li>
-              </ul>
-            </div>
           </div>
         </section>
 
-        <section style={cardStyle}>
-          <div style={cardHeaderStyle}>
+        <section
+          style={{
+            ...cardStyle,
+            ...(settings.highlightCards ? cardStrongStyle : {}),
+            marginTop: 16,
+          }}
+        >
+          <div style={sectionHeaderStyle}>
             <div>
-              <div style={cardEyebrowStyle}>CHANNEL LIST</div>
-              <h2 style={cardTitleStyle}>등록 채널</h2>
+              <div style={sectionEyebrowStyle}>CHANNEL LIST</div>
+              <h2 style={sectionTitleStyle}>등록 채널</h2>
             </div>
-            <span style={countBadgeStyle}>
-              {loading ? '...' : `${channels.length}개 채널`}
-            </span>
+
+            <span style={countBadgeStyle}>{loading ? '...' : `${channels.length}개 채널`}</span>
           </div>
 
-          <div style={{ overflowX: 'auto', marginTop: 16 }}>
+          <div style={tableWrapStyle}>
             <table style={tableStyle}>
               <thead>
                 <tr>
@@ -230,6 +318,7 @@ export default function DashboardClient() {
                   <th style={thStyle}>마지막 스캔</th>
                 </tr>
               </thead>
+
               <tbody>
                 {loading ? (
                   <tr>
@@ -240,18 +329,18 @@ export default function DashboardClient() {
                 ) : channels.length === 0 ? (
                   <tr>
                     <td colSpan={4} style={emptyCellStyle}>
-                      아직 등록된 채널이 없습니다.
+                      등록된 채널이 없습니다.
                     </td>
                   </tr>
                 ) : (
                   channels.map((channel) => (
-                    <tr key={channel.channel_id}>
+                    <tr key={channel.channel_id} style={rowStyle}>
                       <td style={tdStyle}>
                         <a
                           href={channel.channel_url}
                           target="_blank"
                           rel="noreferrer"
-                          style={linkStyle}
+                          style={channelLinkStyle}
                         >
                           {channel.channel_name || '(이름 없음)'}
                         </a>
@@ -259,7 +348,9 @@ export default function DashboardClient() {
                       <td style={tdStyle}>{channel.channel_id}</td>
                       <td style={tdStyle}>
                         <span
-                          style={channel.last_scanned_at ? activeBadgeStyle : waitingBadgeStyle}
+                          style={
+                            channel.last_scanned_at ? statusActiveBadgeStyle : statusIdleBadgeStyle
+                          }
                         >
                           {channel.last_scanned_at ? '활성' : '대기'}
                         </span>
@@ -273,16 +364,18 @@ export default function DashboardClient() {
           </div>
         </section>
 
-        <section style={{ marginTop: 24 }}>
-          <div style={cardHeaderStyle}>
+        <section style={{ marginTop: 16 }}>
+          <div style={sectionHeaderStyle}>
             <div>
-              <div style={cardEyebrowStyle}>LATEST VIDEOS</div>
-              <h2 style={cardTitleStyle}>최근 수집 영상</h2>
+              <div style={sectionEyebrowStyle}>LATEST VIDEOS</div>
+              <h2 style={sectionTitleStyle}>최근 수집 영상</h2>
             </div>
+
+            <span style={countBadgeStyle}>{`${displayVideos.length}개 표시 중`}</span>
           </div>
 
           <div style={{ marginTop: 16 }}>
-            <VideoTable videos={videos} />
+            <VideoTable videos={displayVideos} />
           </div>
         </section>
       </main>
@@ -305,164 +398,200 @@ const pageStyle: CSSProperties = {
   padding: 0,
 }
 
-
 const heroStyle: CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'flex-start',
   gap: 16,
-  flexWrap: 'wrap',
-  marginBottom: 24,
+  marginBottom: 18,
 }
 
 const eyebrowStyle: CSSProperties = {
   fontSize: 12,
   fontWeight: 800,
-  letterSpacing: '0.12em',
-  color: '#dc2626',
+  letterSpacing: '0.16em',
+  color: '#ef4444',
   marginBottom: 10,
 }
 
 const titleStyle: CSSProperties = {
   margin: 0,
-  fontSize: 36,
-  lineHeight: 1.1,
+  fontSize: 40,
+  lineHeight: 1.08,
   fontWeight: 800,
+  color: '#0f172a',
 }
 
 const subtitleStyle: CSSProperties = {
-  marginTop: 12,
-  color: '#6b7280',
+  margin: '12px 0 0',
   fontSize: 15,
-  lineHeight: 1.6,
-  maxWidth: 760,
+  lineHeight: 1.8,
+  color: '#64748b',
+}
+
+const heroChipRowStyle: CSSProperties = {
+  display: 'flex',
+  gap: 10,
+  flexWrap: 'wrap',
+  marginTop: 16,
+}
+
+const heroChipStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '8px 12px',
+  borderRadius: 999,
+  fontSize: 12,
+  fontWeight: 800,
+  color: '#334155',
+  background: '#ffffff',
+  border: '1px solid #e7ebf3',
+  boxShadow: '0 8px 20px rgba(15, 23, 42, 0.03)',
 }
 
 const refreshButtonStyle: CSSProperties = {
   border: 'none',
-  background: '#dc2626',
+  background: 'linear-gradient(135deg, #ef4444 0%, #fb7185 100%)',
   color: '#fff',
-  borderRadius: 12,
-  padding: '12px 18px',
-  fontWeight: 700,
+  borderRadius: 14,
+  padding: '13px 18px',
+  fontSize: 14,
+  fontWeight: 800,
   cursor: 'pointer',
+  boxShadow: '0 14px 28px rgba(239, 68, 68, 0.22)',
 }
 
 const errorBoxStyle: CSSProperties = {
-  marginBottom: 20,
-  padding: 14,
-  borderRadius: 12,
-  border: '1px solid #fecaca',
-  background: '#fef2f2',
-  color: '#991b1b',
+  marginBottom: 16,
+  background: '#fff1f2',
+  border: '1px solid #fecdd3',
+  color: '#be123c',
+  padding: '14px 16px',
+  borderRadius: 16,
 }
 
 const statsGridStyle: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
   gap: 16,
-  marginBottom: 24,
+  marginBottom: 16,
 }
 
 const statCardStyle: CSSProperties = {
-  background: '#fff',
-  border: '1px solid #ececec',
-  borderRadius: 20,
-  padding: 20,
-  boxShadow: '0 8px 24px rgba(15,23,42,0.04)',
+  background: 'rgba(255,255,255,0.92)',
+  borderRadius: 24,
+  padding: 22,
+  border: '1px solid #e9edf5',
+  boxShadow: '0 12px 30px rgba(15, 23, 42, 0.05)',
+}
+
+const statCardStrongStyle: CSSProperties = {
+  boxShadow: '0 18px 38px rgba(15, 23, 42, 0.08)',
+  background: 'linear-gradient(180deg, #ffffff 0%, #fbfcff 100%)',
 }
 
 const statLabelStyle: CSSProperties = {
-  fontSize: 13,
-  color: '#6b7280',
-  marginBottom: 10,
+  fontSize: 12,
+  fontWeight: 800,
+  color: '#94a3b8',
+  marginBottom: 12,
+  letterSpacing: '0.08em',
 }
 
 const statValueStyle: CSSProperties = {
-  fontSize: 28,
+  fontSize: 34,
+  lineHeight: 1.05,
   fontWeight: 800,
-  lineHeight: 1.2,
+  color: '#0f172a',
   marginBottom: 8,
 }
 
 const statHelperStyle: CSSProperties = {
-  fontSize: 13,
-  color: '#9ca3af',
+  fontSize: 12,
+  lineHeight: 1.6,
+  color: '#94a3b8',
 }
 
 const topGridStyle: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '1.4fr 1fr',
+  gridTemplateColumns: '1.2fr 0.8fr',
   gap: 16,
-  marginBottom: 24,
 }
 
 const cardStyle: CSSProperties = {
-  background: '#fff',
-  border: '1px solid #ececec',
-  borderRadius: 22,
+  background: 'rgba(255,255,255,0.92)',
+  borderRadius: 26,
   padding: 22,
-  boxShadow: '0 8px 24px rgba(15,23,42,0.04)',
+  border: '1px solid #e9edf5',
+  boxShadow: '0 12px 30px rgba(15, 23, 42, 0.05)',
 }
 
-const cardHeaderStyle: CSSProperties = {
+const cardStrongStyle: CSSProperties = {
+  boxShadow: '0 18px 38px rgba(15, 23, 42, 0.08)',
+  background: 'linear-gradient(180deg, #ffffff 0%, #fbfcff 100%)',
+}
+
+const sectionHeaderStyle: CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
-  alignItems: 'center',
+  alignItems: 'flex-start',
   gap: 12,
-  flexWrap: 'wrap',
 }
 
-const cardEyebrowStyle: CSSProperties = {
-  fontSize: 11,
+const sectionEyebrowStyle: CSSProperties = {
+  fontSize: 12,
   fontWeight: 800,
-  letterSpacing: '0.12em',
-  color: '#9ca3af',
+  letterSpacing: '0.14em',
+  color: '#94a3b8',
   marginBottom: 8,
 }
 
-const cardTitleStyle: CSSProperties = {
+const sectionTitleStyle: CSSProperties = {
   margin: 0,
   fontSize: 22,
   fontWeight: 800,
+  color: '#0f172a',
 }
 
 const liveBadgeStyle: CSSProperties = {
-  background: '#111827',
-  color: '#fff',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: 30,
+  padding: '0 10px',
   borderRadius: 999,
-  padding: '8px 12px',
-  fontSize: 12,
-  fontWeight: 700,
+  background: '#0f172a',
+  color: '#ffffff',
+  fontSize: 11,
+  fontWeight: 800,
 }
 
-const countBadgeStyle: CSSProperties = {
-  background: '#f3f4f6',
-  color: '#111827',
-  borderRadius: 999,
-  padding: '8px 12px',
-  fontSize: 12,
-  fontWeight: 700,
+const statusPanelStyle: CSSProperties = {
+  marginTop: 18,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 18,
 }
 
-const statusChartStyle: CSSProperties = {
-  height: 180,
+const bubbleChartWrapStyle: CSSProperties = {
+  minHeight: 150,
+  borderRadius: 22,
+  border: '1px solid #edf1f7',
+  background: '#fcfdff',
   display: 'flex',
   alignItems: 'flex-end',
+  justifyContent: 'space-between',
   gap: 10,
-  marginTop: 18,
-  marginBottom: 18,
-  padding: 16,
-  borderRadius: 18,
-  background: '#fafafa',
-  border: '1px solid #efefef',
+  padding: '24px 18px 16px',
+  overflow: 'hidden',
 }
 
-const barStyle: CSSProperties = {
-  flex: 1,
-  minHeight: 24,
+const bubbleStyle: CSSProperties = {
   borderRadius: 999,
-  background: 'linear-gradient(180deg, #ef4444 0%, #fca5a5 100%)',
+  background: 'linear-gradient(180deg, #ff8a8a 0%, #ff4d4f 100%)',
+  boxShadow: '0 10px 20px rgba(239, 68, 68, 0.12)',
+  flexShrink: 0,
 }
 
 const statusListStyle: CSSProperties = {
@@ -475,32 +604,42 @@ const statusRowStyle: CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  gap: 16,
-  padding: '14px 16px',
-  border: '1px solid #efefef',
-  borderRadius: 14,
-  background: '#fafafa',
+  gap: 12,
+  minHeight: 48,
+  padding: '0 16px',
+  borderRadius: 16,
+  background: '#ffffff',
+  border: '1px solid #edf1f7',
 }
 
-const mutedStyle: CSSProperties = {
-  color: '#6b7280',
+const statusLabelStyle: CSSProperties = {
   fontSize: 13,
+  color: '#64748b',
+  fontWeight: 600,
 }
 
-const darkNoteStyle: CSSProperties = {
+const statusValueStyle: CSSProperties = {
+  fontSize: 14,
+  color: '#0f172a',
+  fontWeight: 800,
+}
+
+const countBadgeStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '8px 12px',
+  borderRadius: 999,
+  background: '#ffffff',
+  color: '#334155',
+  fontSize: 12,
+  fontWeight: 800,
+  border: '1px solid #e7ebf3',
+}
+
+const tableWrapStyle: CSSProperties = {
   marginTop: 18,
-  background: '#111827',
-  color: '#fff',
-  borderRadius: 18,
-  padding: 18,
-}
-
-const noteListStyle: CSSProperties = {
-  margin: 0,
-  paddingLeft: 18,
-  color: '#d1d5db',
-  lineHeight: 1.7,
-  fontSize: 13,
+  overflowX: 'auto',
 }
 
 const tableStyle: CSSProperties = {
@@ -510,50 +649,60 @@ const tableStyle: CSSProperties = {
 
 const thStyle: CSSProperties = {
   textAlign: 'left',
+  fontSize: 12,
+  fontWeight: 800,
+  color: '#94a3b8',
   padding: '14px 12px',
-  borderBottom: '1px solid #e5e7eb',
-  background: '#fafafa',
-  color: '#6b7280',
-  fontSize: 13,
+  borderBottom: '1px solid #e7ebf3',
 }
 
 const tdStyle: CSSProperties = {
   padding: '16px 12px',
-  borderBottom: '1px solid #f1f5f9',
+  borderBottom: '1px solid #eef2f7',
   fontSize: 14,
-  verticalAlign: 'top',
+  color: '#0f172a',
+  verticalAlign: 'middle',
+}
+
+const rowStyle: CSSProperties = {
+  background: 'transparent',
 }
 
 const emptyCellStyle: CSSProperties = {
-  padding: 24,
+  padding: '24px 12px',
   textAlign: 'center',
-  color: '#6b7280',
+  color: '#64748b',
+  fontSize: 14,
 }
 
-const linkStyle: CSSProperties = {
-  color: '#111827',
+const channelLinkStyle: CSSProperties = {
+  color: '#0f172a',
   textDecoration: 'none',
-  fontWeight: 700,
+  fontWeight: 800,
 }
 
-const activeBadgeStyle: CSSProperties = {
+const statusActiveBadgeStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
-  borderRadius: 999,
+  justifyContent: 'center',
+  minWidth: 54,
   padding: '6px 10px',
+  borderRadius: 999,
   background: '#ecfdf5',
-  color: '#047857',
+  color: '#059669',
   fontSize: 12,
-  fontWeight: 700,
+  fontWeight: 800,
 }
 
-const waitingBadgeStyle: CSSProperties = {
+const statusIdleBadgeStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
-  borderRadius: 999,
+  justifyContent: 'center',
+  minWidth: 54,
   padding: '6px 10px',
+  borderRadius: 999,
   background: '#f3f4f6',
-  color: '#4b5563',
+  color: '#6b7280',
   fontSize: 12,
-  fontWeight: 700,
+  fontWeight: 800,
 }
