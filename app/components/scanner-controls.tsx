@@ -34,7 +34,10 @@ export default function ScannerControls() {
 
       setMessage(`등록 완료: ${data.channel.channelName}`)
       setInput('')
-      router.refresh()
+      
+      setTimeout(() => {
+  window.location.reload()
+}, 300)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '오류가 발생했습니다.')
     } finally {
@@ -58,7 +61,10 @@ export default function ScannerControls() {
       }
 
       setMessage('전체 스캔 완료')
-      router.refresh()
+
+setTimeout(() => {
+  window.location.reload()
+}, 300)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '오류가 발생했습니다.')
     } finally {
