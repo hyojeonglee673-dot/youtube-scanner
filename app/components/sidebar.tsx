@@ -50,8 +50,7 @@ export default function Sidebar() {
       <div style={bottomBoxStyle}>
         <div style={bottomTitleStyle}>안내</div>
         <p style={bottomTextStyle}>
-          지금은 Overview, Channels, Benchmarks, Reports, Settings
-          구조를 먼저 정리한 상태입니다.
+          지금은 Overview, Channels, Benchmarks, Reports, Settings 구조를 먼저 정리한 상태입니다.
         </p>
       </div>
     </aside>
@@ -59,21 +58,24 @@ export default function Sidebar() {
 }
 
 const asideStyle: CSSProperties = {
-  width: 248,
-  minHeight: '100vh',
-  padding: 18,
-  background: 'rgba(255,255,255,0.72)',
-  backdropFilter: 'blur(14px)',
-  borderRight: '1px solid rgba(226,232,240,0.7)',
+  width: 236,
+  padding: 16,
+  background: 'rgba(255,255,255,0.92)',
+  backdropFilter: 'blur(16px)',
+  border: '1px solid rgba(226,232,240,0.9)',
+  borderRadius: 28,
+  boxShadow: '0 18px 40px rgba(15, 23, 42, 0.08)',
   display: 'flex',
   flexDirection: 'column',
   gap: 18,
   position: 'sticky',
-  top: 0,
+  top: 16,
+  alignSelf: 'flex-start',
+  flexShrink: 0,
 }
 
 const brandWrapStyle: CSSProperties = {
-  padding: '4px 2px 0',
+  padding: '6px 2px 0',
 }
 
 const brandTopStyle: CSSProperties = {
@@ -83,21 +85,22 @@ const brandTopStyle: CSSProperties = {
 }
 
 const brandIconStyle: CSSProperties = {
-  width: 38,
-  height: 38,
+  width: 40,
+  height: 40,
   borderRadius: 14,
   background: 'linear-gradient(135deg, #ef4444 0%, #fb7185 100%)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  boxShadow: '0 10px 22px rgba(239, 68, 68, 0.22)',
+  boxShadow: '0 12px 26px rgba(239, 68, 68, 0.24)',
+  flexShrink: 0,
 }
 
 const brandDotStyle: CSSProperties = {
   width: 12,
   height: 12,
   borderRadius: 999,
-  background: '#fff',
+  background: '#ffffff',
 }
 
 const brandTitleStyle: CSSProperties = {
@@ -117,28 +120,30 @@ const brandSubStyle: CSSProperties = {
 const navStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 8,
+  gap: 10,
 }
 
 const navItemStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 10,
-  padding: '13px 14px',
-  borderRadius: 14,
+  minHeight: 48,
+  padding: '0 16px',
+  borderRadius: 16,
   color: '#334155',
   fontSize: 14,
   fontWeight: 700,
-  background: 'rgba(255,255,255,0.58)',
-  border: '1px solid rgba(226,232,240,0.65)',
+  background: '#ffffff',
+  border: '1px solid #e7ebf3',
+  boxShadow: '0 8px 20px rgba(15, 23, 42, 0.03)',
 }
 
 const navItemActiveStyle: CSSProperties = {
   ...navItemStyle,
   color: '#ffffff',
   background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-  border: '1px solid rgba(15,23,42,0.92)',
-  boxShadow: '0 14px 28px rgba(15, 23, 42, 0.18)',
+  border: '1px solid rgba(15,23,42,0.95)',
+  boxShadow: '0 14px 30px rgba(15, 23, 42, 0.18)',
 }
 
 const navBulletStyle: CSSProperties = {
@@ -147,10 +152,11 @@ const navBulletStyle: CSSProperties = {
   borderRadius: 999,
   background: 'currentColor',
   opacity: 0.88,
+  flexShrink: 0,
 }
 
 const bottomBoxStyle: CSSProperties = {
-  marginTop: 'auto',
+  marginTop: 8,
   padding: 16,
   borderRadius: 18,
   background: '#0f172a',

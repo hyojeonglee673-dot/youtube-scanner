@@ -322,14 +322,20 @@ export default function ReportsPage() {
 
 const shellStyle: CSSProperties = {
   display: 'flex',
+  gap: 16,
+  alignItems: 'flex-start',
   minHeight: '100vh',
+  padding: '16px',
   background: '#f5f7fb',
 }
 
+
 const pageStyle: CSSProperties = {
   flex: 1,
-  padding: '28px',
+  minWidth: 0,
+  padding: 0,
 }
+
 
 const heroStyle: CSSProperties = {
   display: 'flex',

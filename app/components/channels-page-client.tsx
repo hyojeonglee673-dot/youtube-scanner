@@ -160,19 +160,20 @@ export default function ChannelsPageClient() {
 
 const shellStyle: CSSProperties = {
   display: 'flex',
-  gap: 20,
+  gap: 16,
   alignItems: 'flex-start',
-  padding: 20,
-  background: '#f7f7f8',
   minHeight: '100vh',
-  boxSizing: 'border-box',
+  padding: '16px',
+  background: '#f5f7fb',
 }
 
 const pageStyle: CSSProperties = {
   flex: 1,
   minWidth: 0,
-  color: '#111827',
+  padding: 0,
 }
+
+
 
 const heroStyle: CSSProperties = {
   display: 'flex',

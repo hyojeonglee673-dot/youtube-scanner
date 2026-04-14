@@ -277,19 +277,20 @@ export default function BenchmarksPageClient() {
 
 const shellStyle: CSSProperties = {
   display: 'flex',
-  gap: 20,
   alignItems: 'flex-start',
-  padding: 20,
-  background: '#f7f7f8',
   minHeight: '100vh',
-  boxSizing: 'border-box',
+  padding: '16px',
+  background: '#f5f7fb',
 }
+
 
 const pageStyle: CSSProperties = {
   flex: 1,
   minWidth: 0,
-  color: '#111827',
+  padding: 0,
 }
+
+
 
 const heroStyle: CSSProperties = {
   display: 'flex',
