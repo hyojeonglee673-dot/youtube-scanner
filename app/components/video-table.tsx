@@ -12,193 +12,78 @@ type VideoItem = {
   published_at: string | null
 }
 
-function formatDate(value: string | null) {
-  if (!value) return '-'
-  return new Date(value).toLocaleString('ko-KR')
+type Props = {
+  videos: VideoItem[]
 }
 
-function formatViews(value: number) {
+function formatDate(value: string | null) {
+  return value ? new Date(value).toLocaleString('ko-KR') : '-'
+}
+
+function formatNumber(value: number) {
   return new Intl.NumberFormat('ko-KR').format(value || 0)
 }
 
-export default function VideoTable({ videos }: { videos: VideoItem[] }) {
+export default function VideoTable({ videos }: Props) {
   if (!videos || videos.length === 0) {
-    return (
-      <div style={emptyWrapStyle}>
-        <div style={emptyTitleStyle}>아직 수집된 영상이 없습니다</div>
-        <p style={emptyTextStyle}>
-          채널을 등록하고 스캔을 실행하면 최신 영상이 여기에 표시됩니다.
-        </p>
-      </div>
-    )
+    return <div style={emptyStyle}>아직 수집된 영상이 없습니다.</div>
   }
 
   return (
-    <div style={wrapStyle}>
-      <div style={tableHeaderStyle}>
-        <div>
-          <div style={eyebrowStyle}>VIDEO MONITORING</div>
-          <h3 style={titleStyle}>최근 수집 영상 목록</h3>
-        </div>
+    <div style={listStyle}>
+      {videos.slice(0, 10).map((video) => (
+        <article key={video.video_id} style={itemStyle}>
+          <div style={thumbWrapStyle}>
+            {video.thumbnail_url ? (
+              <img src={video.thumbnail_url} alt={video.title} style={thumbStyle} />
+            ) : (
+              <div style={thumbFallbackStyle}>NO IMAGE</div>
+            )}
+          </div>
 
-        <div style={countBadgeStyle}>{videos.length}개 영상</div>
-      </div>
+          <div style={contentStyle}>
+            <div style={channelStyle}>{video.source_channel_name || '채널명 없음'}</div>
+            <h3 style={titleStyle}>{video.title}</h3>
 
-      <div style={tableWrapStyle}>
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>영상</th>
-              <th style={thStyle}>채널</th>
-              <th style={thStyle}>조회수</th>
-              <th style={thStyle}>게시일</th>
-              <th style={thStyle}>바로가기</th>
-            </tr>
-          </thead>
+            <div style={metaRowStyle}>
+              <span style={metaPillStyle}>조회수 {formatNumber(video.view_count || 0)}</span>
+              <span style={metaTextStyle}>{formatDate(video.published_at)}</span>
+            </div>
+          </div>
 
-          <tbody>
-            {videos.map((video) => (
-              <tr key={video.video_id} style={rowStyle}>
-                <td style={tdStyle}>
-                  <div style={videoCellStyle}>
-                    <div style={thumbWrapStyle}>
-                      {video.thumbnail_url ? (
-                        <img
-                          src={video.thumbnail_url}
-                          alt={video.title}
-                          style={thumbStyle}
-                        />
-                      ) : (
-                        <div style={thumbPlaceholderStyle}>No Image</div>
-                      )}
-                    </div>
-
-                    <div style={videoMetaStyle}>
-                      <div style={videoTitleStyle}>{video.title}</div>
-                      <div style={videoIdStyle}>{video.video_id}</div>
-                    </div>
-                  </div>
-                </td>
-
-                <td style={tdStyle}>
-                  <span style={channelBadgeStyle}>
-                    {video.source_channel_name || '채널명 없음'}
-                  </span>
-                </td>
-
-                <td style={tdStyle}>
-                  <strong style={viewsStyle}>{formatViews(video.view_count)}</strong>
-                </td>
-
-                <td style={tdStyle}>
-                  <span style={dateStyle}>{formatDate(video.published_at)}</span>
-                </td>
-
-                <td style={tdStyle}>
-                  <a
-                    href={video.youtube_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={linkButtonStyle}
-                  >
-                    열기
-                  </a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          <a href={video.youtube_url} target="_blank" rel="noreferrer" style={openButtonStyle}>
+            Open
+          </a>
+        </article>
+      ))}
     </div>
   )
 }
 
-const wrapStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #ececec',
-  borderRadius: 24,
-  padding: 22,
-  boxShadow: '0 8px 24px rgba(15,23,42,0.04)',
-}
-
-const tableHeaderStyle: CSSProperties = {
+const listStyle: CSSProperties = {
   display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: 12,
-  flexWrap: 'wrap',
-  marginBottom: 18,
-}
-
-const eyebrowStyle: CSSProperties = {
-  fontSize: 11,
-  fontWeight: 800,
-  letterSpacing: '0.12em',
-  color: '#9ca3af',
-  marginBottom: 8,
-}
-
-const titleStyle: CSSProperties = {
-  margin: 0,
-  fontSize: 22,
-  fontWeight: 800,
-  color: '#111827',
-}
-
-const countBadgeStyle: CSSProperties = {
-  background: '#f3f4f6',
-  color: '#111827',
-  borderRadius: 999,
-  padding: '8px 12px',
-  fontSize: 12,
-  fontWeight: 700,
-}
-
-const tableWrapStyle: CSSProperties = {
-  overflowX: 'auto',
-}
-
-const tableStyle: CSSProperties = {
-  width: '100%',
-  borderCollapse: 'collapse',
-}
-
-const thStyle: CSSProperties = {
-  textAlign: 'left',
-  padding: '14px 12px',
-  borderBottom: '1px solid #e5e7eb',
-  background: '#fafafa',
-  color: '#6b7280',
-  fontSize: 13,
-  whiteSpace: 'nowrap',
-}
-
-const tdStyle: CSSProperties = {
-  padding: '16px 12px',
-  borderBottom: '1px solid #f1f5f9',
-  verticalAlign: 'top',
-  fontSize: 14,
-}
-
-const rowStyle: CSSProperties = {
-  background: '#ffffff',
-}
-
-const videoCellStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'flex-start',
+  flexDirection: 'column',
   gap: 14,
-  minWidth: 320,
+}
+
+const itemStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '160px minmax(0, 1fr) auto',
+  gap: 16,
+  alignItems: 'center',
+  padding: 16,
+  borderRadius: 20,
+  background: '#ffffff',
+  border: '1px solid #eceef3',
+  boxShadow: '0 12px 30px rgba(15, 23, 42, 0.05)',
 }
 
 const thumbWrapStyle: CSSProperties = {
-  width: 120,
-  height: 68,
-  borderRadius: 12,
+  width: '100%',
+  height: 94,
+  borderRadius: 16,
   overflow: 'hidden',
-  background: '#f3f4f6',
-  flexShrink: 0,
-  border: '1px solid #ececec',
+  background: '#f8fafc',
 }
 
 const thumbStyle: CSSProperties = {
@@ -208,90 +93,92 @@ const thumbStyle: CSSProperties = {
   display: 'block',
 }
 
-const thumbPlaceholderStyle: CSSProperties = {
+const thumbFallbackStyle: CSSProperties = {
   width: '100%',
   height: '100%',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
+  background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+  color: '#b91c1c',
+  fontWeight: 800,
   fontSize: 12,
-  color: '#9ca3af',
-  background: '#f9fafb',
+  letterSpacing: '0.08em',
 }
 
-const videoMetaStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 8,
+const contentStyle: CSSProperties = {
   minWidth: 0,
 }
 
-const videoTitleStyle: CSSProperties = {
-  fontWeight: 700,
-  color: '#111827',
+const channelStyle: CSSProperties = {
+  fontSize: 11,
+  fontWeight: 800,
+  letterSpacing: '0.12em',
+  color: '#ef4444',
+  marginBottom: 8,
+}
+
+const titleStyle: CSSProperties = {
+  margin: 0,
+  color: '#0f172a',
+  fontSize: 17,
   lineHeight: 1.45,
-  wordBreak: 'break-word',
+  fontWeight: 800,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical',
 }
 
-const videoIdStyle: CSSProperties = {
-  fontSize: 12,
-  color: '#9ca3af',
-  wordBreak: 'break-all',
-}
-
-const channelBadgeStyle: CSSProperties = {
-  display: 'inline-flex',
+const metaRowStyle: CSSProperties = {
+  display: 'flex',
   alignItems: 'center',
-  padding: '6px 10px',
-  borderRadius: 999,
-  background: '#fef2f2',
-  color: '#b91c1c',
-  fontSize: 12,
-  fontWeight: 700,
+  gap: 10,
+  flexWrap: 'wrap',
+  marginTop: 12,
 }
 
-const viewsStyle: CSSProperties = {
-  color: '#111827',
-  fontSize: 15,
-}
-
-const dateStyle: CSSProperties = {
-  color: '#4b5563',
-  lineHeight: 1.5,
-}
-
-const linkButtonStyle: CSSProperties = {
+const metaPillStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: '10px 14px',
-  borderRadius: 12,
-  background: '#111827',
-  color: '#ffffff',
-  textDecoration: 'none',
-  fontSize: 13,
-  fontWeight: 700,
-  whiteSpace: 'nowrap',
-}
-
-const emptyWrapStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #ececec',
-  borderRadius: 24,
-  padding: 32,
-  boxShadow: '0 8px 24px rgba(15,23,42,0.04)',
-  textAlign: 'center',
-}
-
-const emptyTitleStyle: CSSProperties = {
-  fontSize: 18,
+  padding: '7px 10px',
+  borderRadius: 999,
+  background: '#fef2f2',
+  color: '#dc2626',
+  fontSize: 12,
   fontWeight: 800,
-  color: '#111827',
-  marginBottom: 10,
 }
 
-const emptyTextStyle: CSSProperties = {
-  margin: 0,
-  color: '#6b7280',
-  lineHeight: 1.6,
+const metaTextStyle: CSSProperties = {
+  fontSize: 12,
+  color: '#64748b',
+  fontWeight: 600,
+}
+
+const openButtonStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: 78,
+  height: 42,
+  padding: '0 14px',
+  borderRadius: 12,
+  background: '#0f172a',
+  color: '#ffffff',
+  fontSize: 13,
+  fontWeight: 800,
+  textDecoration: 'none',
+  boxShadow: '0 12px 24px rgba(15, 23, 42, 0.12)',
+}
+
+const emptyStyle: CSSProperties = {
+  padding: 22,
+  borderRadius: 18,
+  background: '#ffffff',
+  border: '1px solid #eceef3',
+  boxShadow: '0 12px 30px rgba(15, 23, 42, 0.05)',
+  color: '#64748b',
+  fontSize: 14,
 }

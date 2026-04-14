@@ -77,7 +77,7 @@ export default function ScannerControls({ onDone }: Props) {
   return (
     <div style={wrapStyle}>
       <form onSubmit={handleAddChannel} style={formStyle}>
-        <div style={inputWrapStyle}>
+        <div style={fieldWrapStyle}>
           <label style={labelStyle}>채널 입력</label>
           <input
             value={input}
@@ -88,7 +88,7 @@ export default function ScannerControls({ onDone }: Props) {
           />
         </div>
 
-        <div style={buttonGroupStyle}>
+        <div style={buttonRowStyle}>
           <button type="submit" disabled={loading} style={primaryButtonStyle}>
             {loading ? '처리 중...' : '채널 등록'}
           </button>
@@ -110,6 +110,15 @@ export default function ScannerControls({ onDone }: Props) {
           {message || '채널을 등록하면 최신 영상 10개를 바로 가져옵니다.'}
         </p>
       </div>
+
+      <div style={noteBoxStyle}>
+        <div style={noteTitleStyle}>운영 메모</div>
+        <ul style={noteListStyle}>
+          <li>새 채널 등록 후 바로 최근 영상 반영 여부를 확인하세요.</li>
+          <li>전체 스캔 후 Overview와 Reports에서 데이터가 바뀌는지 보면 됩니다.</li>
+          <li>오류가 뜨면 새로고침 후 한 번만 다시 시도하세요.</li>
+        </ul>
+      </div>
     </div>
   )
 }
@@ -126,7 +135,7 @@ const formStyle: CSSProperties = {
   gap: 14,
 }
 
-const inputWrapStyle: CSSProperties = {
+const fieldWrapStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: 8,
@@ -134,68 +143,96 @@ const inputWrapStyle: CSSProperties = {
 
 const labelStyle: CSSProperties = {
   fontSize: 12,
-  fontWeight: 700,
-  color: '#6b7280',
+  fontWeight: 800,
+  color: '#94a3b8',
+  letterSpacing: '0.08em',
 }
 
 const inputStyle: CSSProperties = {
   width: '100%',
-  padding: '14px 16px',
-  border: '1px solid #d1d5db',
+  height: 50,
+  padding: '0 16px',
   borderRadius: 14,
-  fontSize: 14,
-  outline: 'none',
+  border: '1px solid #e5eaf3',
   background: '#ffffff',
-  color: '#111827',
+  color: '#0f172a',
+  fontSize: 14,
+  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)',
 }
 
-const buttonGroupStyle: CSSProperties = {
+const buttonRowStyle: CSSProperties = {
   display: 'flex',
   gap: 10,
   flexWrap: 'wrap',
 }
 
 const primaryButtonStyle: CSSProperties = {
-  padding: '12px 16px',
+  height: 44,
+  padding: '0 16px',
   borderRadius: 12,
   border: 'none',
-  background: '#111827',
+  background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
   color: '#ffffff',
-  fontWeight: 700,
   fontSize: 14,
+  fontWeight: 800,
   cursor: 'pointer',
-  minWidth: 120,
+  boxShadow: '0 12px 24px rgba(15, 23, 42, 0.15)',
 }
 
 const secondaryButtonStyle: CSSProperties = {
-  padding: '12px 16px',
+  height: 44,
+  padding: '0 16px',
   borderRadius: 12,
-  border: '1px solid #d1d5db',
+  border: '1px solid #e5eaf3',
   background: '#ffffff',
-  color: '#111827',
-  fontWeight: 700,
+  color: '#0f172a',
   fontSize: 14,
+  fontWeight: 800,
   cursor: 'pointer',
-  minWidth: 120,
 }
 
 const messageBoxStyle: CSSProperties = {
-  border: '1px solid #ececec',
-  borderRadius: 16,
-  background: '#fafafa',
-  padding: 14,
+  borderRadius: 18,
+  padding: 16,
+  background: 'linear-gradient(180deg, #ffffff 0%, #fbfcff 100%)',
+  border: '1px solid #edf1f7',
+  boxShadow: '0 10px 24px rgba(15, 23, 42, 0.04)',
 }
 
 const messageLabelStyle: CSSProperties = {
-  fontSize: 12,
-  fontWeight: 700,
-  color: '#9ca3af',
-  marginBottom: 6,
+  fontSize: 11,
+  fontWeight: 800,
+  letterSpacing: '0.12em',
+  color: '#94a3b8',
+  marginBottom: 8,
 }
 
 const messageTextStyle: CSSProperties = {
   margin: 0,
-  color: '#374151',
   fontSize: 14,
-  lineHeight: 1.6,
+  lineHeight: 1.7,
+  color: '#334155',
+}
+
+const noteBoxStyle: CSSProperties = {
+  borderRadius: 18,
+  padding: 16,
+  background: '#0f172a',
+  boxShadow: '0 16px 30px rgba(15, 23, 42, 0.16)',
+}
+
+const noteTitleStyle: CSSProperties = {
+  fontSize: 11,
+  fontWeight: 800,
+  letterSpacing: '0.12em',
+  color: '#fca5a5',
+  marginBottom: 8,
+}
+
+const noteListStyle: CSSProperties = {
+  margin: 0,
+  paddingLeft: 18,
+  color: '#e2e8f0',
+  fontSize: 13,
+  lineHeight: 1.8,
 }

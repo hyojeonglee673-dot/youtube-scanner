@@ -16,165 +16,158 @@ export default function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside style={sidebarStyle}>
+    <aside style={asideStyle}>
       <div style={brandWrapStyle}>
-        <div style={brandDotStyle} />
-        <div>
-          <div style={brandTitleStyle}>YOUTUBE-SCANNER</div>
-          <div style={brandSubtitleStyle}>Control Panel</div>
+        <div style={brandTopStyle}>
+          <div style={brandIconStyle}>
+            <div style={brandDotStyle} />
+          </div>
+
+          <div>
+            <div style={brandTitleStyle}>YOUTUBE-SCANNER</div>
+            <div style={brandSubStyle}>Control Panel</div>
+          </div>
         </div>
       </div>
 
       <nav style={navStyle}>
         {navItems.map((item) => {
-          const active = item.href && pathname === item.href
-
-          if (!item.href) {
-            return (
-              <div key={item.label} style={navItemDisabledStyle}>
-                <span style={navDotStyle} />
-                <span>{item.label}</span>
-              </div>
-            )
-          }
+          const active = pathname === item.href
 
           return (
             <Link
               key={item.label}
               href={item.href}
-              style={{
-                ...navItemStyle,
-                ...(active ? navItemActiveStyle : {}),
-              }}
+              style={active ? navItemActiveStyle : navItemStyle}
             >
-              <span style={navDotStyle} />
+              <span style={navBulletStyle} />
               <span>{item.label}</span>
             </Link>
           )
         })}
       </nav>
 
-      <div style={sideInfoBoxStyle}>
-        <div style={sideInfoTitleStyle}>안내</div>
-        <p style={sideInfoTextStyle}>
-          지금은 Overview, Channels, Benchmarks까지 연결했어요.
-          <br />
-          다음 단계에서 Reports, Settings도 이어서 만들 수 있어요.
+      <div style={bottomBoxStyle}>
+        <div style={bottomTitleStyle}>안내</div>
+        <p style={bottomTextStyle}>
+          지금은 Overview, Channels, Benchmarks, Reports, Settings
+          구조를 먼저 정리한 상태입니다.
         </p>
       </div>
     </aside>
   )
 }
 
-const sidebarStyle: CSSProperties = {
-  width: 240,
-  minWidth: 240,
-  background: '#ffffff',
-  border: '1px solid #ececec',
-  borderRadius: 24,
-  padding: 20,
-  boxShadow: '0 8px 24px rgba(15,23,42,0.04)',
+const asideStyle: CSSProperties = {
+  width: 248,
+  minHeight: '100vh',
+  padding: 18,
+  background: 'rgba(255,255,255,0.72)',
+  backdropFilter: 'blur(14px)',
+  borderRight: '1px solid rgba(226,232,240,0.7)',
   display: 'flex',
   flexDirection: 'column',
-  gap: 20,
-  alignSelf: 'flex-start',
+  gap: 18,
   position: 'sticky',
-  top: 20,
+  top: 0,
 }
 
 const brandWrapStyle: CSSProperties = {
+  padding: '4px 2px 0',
+}
+
+const brandTopStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 12,
-  paddingBottom: 16,
-  borderBottom: '1px solid #f1f5f9',
+}
+
+const brandIconStyle: CSSProperties = {
+  width: 38,
+  height: 38,
+  borderRadius: 14,
+  background: 'linear-gradient(135deg, #ef4444 0%, #fb7185 100%)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  boxShadow: '0 10px 22px rgba(239, 68, 68, 0.22)',
 }
 
 const brandDotStyle: CSSProperties = {
-  width: 14,
-  height: 14,
+  width: 12,
+  height: 12,
   borderRadius: 999,
-  background: '#ef4444',
-  boxShadow: '0 0 0 6px rgba(239,68,68,0.12)',
+  background: '#fff',
 }
 
 const brandTitleStyle: CSSProperties = {
   fontSize: 13,
   fontWeight: 800,
   letterSpacing: '0.08em',
-  color: '#111827',
+  color: '#0f172a',
 }
 
-const brandSubtitleStyle: CSSProperties = {
-  fontSize: 12,
-  color: '#9ca3af',
-  marginTop: 4,
+const brandSubStyle: CSSProperties = {
+  marginTop: 2,
+  fontSize: 11,
+  color: '#64748b',
+  fontWeight: 600,
 }
 
 const navStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 10,
+  gap: 8,
 }
 
 const navItemStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 10,
-  padding: '12px 14px',
+  padding: '13px 14px',
   borderRadius: 14,
-  background: '#f9fafb',
-  color: '#374151',
+  color: '#334155',
   fontSize: 14,
   fontWeight: 700,
-  border: '1px solid transparent',
-  textDecoration: 'none',
+  background: 'rgba(255,255,255,0.58)',
+  border: '1px solid rgba(226,232,240,0.65)',
 }
 
 const navItemActiveStyle: CSSProperties = {
-  background: '#111827',
+  ...navItemStyle,
   color: '#ffffff',
+  background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+  border: '1px solid rgba(15,23,42,0.92)',
+  boxShadow: '0 14px 28px rgba(15, 23, 42, 0.18)',
 }
 
-const navItemDisabledStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 10,
-  padding: '12px 14px',
-  borderRadius: 14,
-  background: '#f9fafb',
-  color: '#9ca3af',
-  fontSize: 14,
-  fontWeight: 700,
-  border: '1px solid transparent',
-  opacity: 0.7,
-}
-
-const navDotStyle: CSSProperties = {
-  width: 8,
-  height: 8,
+const navBulletStyle: CSSProperties = {
+  width: 7,
+  height: 7,
   borderRadius: 999,
   background: 'currentColor',
-  opacity: 0.9,
+  opacity: 0.88,
 }
 
-const sideInfoBoxStyle: CSSProperties = {
+const bottomBoxStyle: CSSProperties = {
   marginTop: 'auto',
-  borderRadius: 18,
-  background: '#111827',
-  color: '#ffffff',
   padding: 16,
+  borderRadius: 18,
+  background: '#0f172a',
+  boxShadow: '0 18px 32px rgba(15, 23, 42, 0.18)',
 }
 
-const sideInfoTitleStyle: CSSProperties = {
-  fontSize: 13,
+const bottomTitleStyle: CSSProperties = {
+  fontSize: 11,
   fontWeight: 800,
+  letterSpacing: '0.12em',
+  color: '#fca5a5',
   marginBottom: 8,
 }
 
-const sideInfoTextStyle: CSSProperties = {
+const bottomTextStyle: CSSProperties = {
   margin: 0,
-  color: '#d1d5db',
   fontSize: 12,
-  lineHeight: 1.7,
+  lineHeight: 1.75,
+  color: '#e2e8f0',
 }
