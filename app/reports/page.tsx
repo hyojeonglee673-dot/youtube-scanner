@@ -20,6 +20,48 @@ type VideoItem = {
   published_at: string | null
 }
 
+type UserSettings = {
+  videoLimit: number
+  highlightCards: boolean
+  recentFirst: boolean
+}
+
+const SETTINGS_KEY = 'yt-scanner-settings-v1'
+
+const defaultSettings: UserSettings = {
+  videoLimit: 10,
+  highlightCards: true,
+  recentFirst: true,
+}
+
+function getStoredSettings(): UserSettings {
+  if (typeof window === 'undefined') return defaultSettings
+
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_KEY)
+    if (!raw) return defaultSettings
+
+    const parsed = JSON.parse(raw)
+
+    return {
+      videoLimit:
+        typeof parsed.videoLimit === 'number' && parsed.videoLimit > 0
+          ? parsed.videoLimit
+          : defaultSettings.videoLimit,
+      highlightCards:
+        typeof parsed.highlightCards === 'boolean'
+          ? parsed.highlightCards
+          : defaultSettings.highlightCards,
+      recentFirst:
+        typeof parsed.recentFirst === 'boolean'
+          ? parsed.recentFirst
+          : defaultSettings.recentFirst,
+    }
+  } catch {
+    return defaultSettings
+  }
+}
+
 function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleString('ko-KR') : '-'
 }
@@ -42,16 +84,27 @@ function MetricCard({
   label,
   value,
   helper,
+  highlighted,
 }: {
   label: string
   value: string
   helper: string
+  highlighted: boolean
 }) {
   return (
-    <div style={metricCardStyle}>
+    <div style={{ ...metricCardStyle, ...(highlighted ? metricCardStrongStyle : {}) }}>
       <div style={metricLabelStyle}>{label}</div>
       <div style={metricValueStyle}>{value}</div>
       <div style={metricHelperStyle}>{helper}</div>
+    </div>
+  )
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={summaryRowStyle}>
+      <span style={summaryLabelStyle}>{label}</span>
+      <strong style={summaryValueStyle}>{value}</strong>
     </div>
   )
 }
@@ -61,6 +114,7 @@ export default function ReportsPage() {
   const [videos, setVideos] = useState<VideoItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [settings, setSettings] = useState<UserSettings>(defaultSettings)
 
   const refreshReports = useCallback(async () => {
     try {
@@ -86,6 +140,7 @@ export default function ReportsPage() {
   }, [])
 
   useEffect(() => {
+    setSettings(getStoredSettings())
     refreshReports()
   }, [refreshReports])
 
@@ -113,15 +168,19 @@ export default function ReportsPage() {
     }
   }, [channels, videos])
 
-  const recentVideos = useMemo(() => {
-    return [...videos]
-      .sort((a, b) => {
+  const displayVideos = useMemo(() => {
+    const sorted = [...videos].sort((a, b) => {
+      if (settings.recentFirst) {
         const aTime = a.published_at ? new Date(a.published_at).getTime() : 0
         const bTime = b.published_at ? new Date(b.published_at).getTime() : 0
         return bTime - aTime
-      })
-      .slice(0, 5)
-  }, [videos])
+      }
+
+      return (b.view_count || 0) - (a.view_count || 0)
+    })
+
+    return sorted.slice(0, settings.videoLimit)
+  }, [videos, settings])
 
   const sortedChannels = useMemo(() => {
     return [...channels].sort((a, b) => {
@@ -143,6 +202,16 @@ export default function ReportsPage() {
             <p style={subtitleStyle}>
               채널 등록 현황, 최근 스캔 상태, 수집된 영상 흐름을 한눈에 보는 운영 리포트입니다.
             </p>
+
+            <div style={heroChipRowStyle}>
+              <span style={heroChipStyle}>최근 영상 {settings.videoLimit}개 표시</span>
+              <span style={heroChipStyle}>
+                {settings.recentFirst ? '최신순 정렬' : '조회수순 정렬'}
+              </span>
+              <span style={heroChipStyle}>
+                카드 강조 {settings.highlightCards ? 'ON' : 'OFF'}
+              </span>
+            </div>
           </div>
 
           <button type="button" onClick={refreshReports} style={refreshButtonStyle}>
@@ -157,75 +226,82 @@ export default function ReportsPage() {
             label="등록 채널 수"
             value={loading ? '...' : String(stats.totalChannels)}
             helper="현재 추적 중인 전체 채널"
+            highlighted={settings.highlightCards}
           />
           <MetricCard
             label="스캔 완료 채널"
             value={loading ? '...' : String(stats.scannedChannels)}
             helper="최근 스캔 이력이 있는 채널"
+            highlighted={settings.highlightCards}
           />
           <MetricCard
             label="수집 영상 수"
             value={loading ? '...' : String(stats.totalVideos)}
             helper="현재 저장된 전체 영상"
+            highlighted={settings.highlightCards}
           />
           <MetricCard
             label="누적 조회수"
             value={loading ? '...' : formatNumber(stats.totalViews)}
             helper="수집된 영상 기준 합계"
+            highlighted={settings.highlightCards}
           />
         </section>
 
         <section style={contentGridStyle}>
-          <div style={cardStyle}>
+          <div
+            style={{
+              ...cardStyle,
+              ...(settings.highlightCards ? cardStrongStyle : {}),
+            }}
+          >
             <div style={sectionEyebrowStyle}>SUMMARY REPORT</div>
             <h2 style={sectionTitleStyle}>운영 요약</h2>
 
             <div style={summaryListStyle}>
-              <div style={summaryRowStyle}>
-                <span style={summaryLabelStyle}>최근 스캔 시각</span>
-                <strong style={summaryValueStyle}>{loading ? '...' : stats.latestScan}</strong>
-              </div>
-
-              <div style={summaryRowStyle}>
-                <span style={summaryLabelStyle}>가장 활발한 채널</span>
-                <strong style={summaryValueStyle}>{loading ? '...' : stats.topChannel}</strong>
-              </div>
-
-              <div style={summaryRowStyle}>
-                <span style={summaryLabelStyle}>채널 커버리지</span>
-                <strong style={summaryValueStyle}>
-                  {loading ? '...' : `${stats.scannedChannels} / ${stats.totalChannels}`}
-                </strong>
-              </div>
-
-              <div style={summaryRowStyle}>
-                <span style={summaryLabelStyle}>운영 상태</span>
-                <strong style={{ ...summaryValueStyle, color: '#dc2626' }}>
-                  {loading ? '확인 중...' : '정상 운영'}
-                </strong>
-              </div>
+              <SummaryRow
+                label="최근 스캔 시각"
+                value={loading ? '...' : stats.latestScan}
+              />
+              <SummaryRow
+                label="가장 활발한 채널"
+                value={loading ? '...' : stats.topChannel}
+              />
+              <SummaryRow
+                label="채널 커버리지"
+                value={loading ? '...' : `${stats.scannedChannels} / ${stats.totalChannels}`}
+              />
+              <SummaryRow
+                label="운영 상태"
+                value={loading ? '확인 중...' : '정상 운영'}
+              />
             </div>
 
             <div style={noteBoxStyle}>
               <div style={noteTitleStyle}>리포트 메모</div>
               <p style={noteTextStyle}>
-                이 화면은 현재 저장된 데이터 기준 요약 리포트입니다. 이후에는 주간 리포트,
-                채널별 PDF 내보내기, 자동 보고서 형태로 확장하기 좋습니다.
+                Settings에서 저장한 표시 개수, 정렬 방식, 카드 강조 옵션이 이 페이지에도
+                반영됩니다.
               </p>
             </div>
           </div>
 
-          <div style={cardStyle}>
+          <div
+            style={{
+              ...cardStyle,
+              ...(settings.highlightCards ? cardStrongStyle : {}),
+            }}
+          >
             <div style={sectionEyebrowStyle}>LATEST ACTIVITY</div>
             <h2 style={sectionTitleStyle}>최근 수집 영상</h2>
 
             <div style={activityListStyle}>
               {loading ? (
                 <div style={emptyStateStyle}>불러오는 중...</div>
-              ) : recentVideos.length === 0 ? (
+              ) : displayVideos.length === 0 ? (
                 <div style={emptyStateStyle}>표시할 영상이 없습니다.</div>
               ) : (
-                recentVideos.map((video) => (
+                displayVideos.map((video) => (
                   <div key={video.video_id} style={activityItemStyle}>
                     <div style={activityTextWrapStyle}>
                       <div style={activityTitleStyle}>{video.title}</div>
@@ -250,7 +326,13 @@ export default function ReportsPage() {
           </div>
         </section>
 
-        <section style={cardStyle}>
+        <section
+          style={{
+            ...cardStyle,
+            ...(settings.highlightCards ? cardStrongStyle : {}),
+            marginTop: 16,
+          }}
+        >
           <div style={tableHeaderStyle}>
             <div>
               <div style={sectionEyebrowStyle}>CHANNEL REPORT</div>
@@ -329,55 +411,74 @@ const shellStyle: CSSProperties = {
   background: '#f5f7fb',
 }
 
-
 const pageStyle: CSSProperties = {
   flex: 1,
   minWidth: 0,
   padding: 0,
 }
 
-
 const heroStyle: CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'flex-start',
   gap: 16,
-  marginBottom: 20,
+  marginBottom: 18,
 }
 
 const eyebrowStyle: CSSProperties = {
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 800,
-  letterSpacing: '0.14em',
+  letterSpacing: '0.16em',
   color: '#ef4444',
-  marginBottom: 8,
+  marginBottom: 10,
 }
 
 const titleStyle: CSSProperties = {
   margin: 0,
-  fontSize: 36,
-  lineHeight: 1.1,
+  fontSize: 40,
+  lineHeight: 1.08,
   fontWeight: 800,
-  color: '#111827',
+  color: '#0f172a',
 }
 
 const subtitleStyle: CSSProperties = {
-  margin: '10px 0 0',
-  fontSize: 14,
-  lineHeight: 1.7,
-  color: '#6b7280',
+  margin: '12px 0 0',
+  fontSize: 15,
+  lineHeight: 1.8,
+  color: '#64748b',
+}
+
+const heroChipRowStyle: CSSProperties = {
+  display: 'flex',
+  gap: 10,
+  flexWrap: 'wrap',
+  marginTop: 16,
+}
+
+const heroChipStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '8px 12px',
+  borderRadius: 999,
+  fontSize: 12,
+  fontWeight: 800,
+  color: '#334155',
+  background: '#ffffff',
+  border: '1px solid #e7ebf3',
+  boxShadow: '0 8px 20px rgba(15, 23, 42, 0.03)',
 }
 
 const refreshButtonStyle: CSSProperties = {
   border: 'none',
-  background: '#ef4444',
+  background: 'linear-gradient(135deg, #ef4444 0%, #fb7185 100%)',
   color: '#fff',
-  borderRadius: 12,
-  padding: '12px 16px',
+  borderRadius: 14,
+  padding: '13px 18px',
   fontSize: 14,
-  fontWeight: 700,
+  fontWeight: 800,
   cursor: 'pointer',
-  boxShadow: '0 8px 20px rgba(239, 68, 68, 0.22)',
+  boxShadow: '0 14px 28px rgba(239, 68, 68, 0.22)',
 }
 
 const errorBoxStyle: CSSProperties = {
@@ -386,7 +487,7 @@ const errorBoxStyle: CSSProperties = {
   border: '1px solid #fecdd3',
   color: '#be123c',
   padding: '14px 16px',
-  borderRadius: 14,
+  borderRadius: 16,
 }
 
 const statsGridStyle: CSSProperties = {
@@ -397,30 +498,37 @@ const statsGridStyle: CSSProperties = {
 }
 
 const metricCardStyle: CSSProperties = {
-  background: '#ffffff',
-  borderRadius: 18,
-  padding: 20,
-  border: '1px solid #eceef3',
+  background: 'rgba(255,255,255,0.92)',
+  borderRadius: 24,
+  padding: 22,
+  border: '1px solid #e9edf5',
   boxShadow: '0 12px 30px rgba(15, 23, 42, 0.05)',
+}
+
+const metricCardStrongStyle: CSSProperties = {
+  boxShadow: '0 18px 38px rgba(15, 23, 42, 0.08)',
+  background: 'linear-gradient(180deg, #ffffff 0%, #fbfcff 100%)',
 }
 
 const metricLabelStyle: CSSProperties = {
   fontSize: 12,
-  fontWeight: 700,
-  color: '#9ca3af',
-  marginBottom: 10,
+  fontWeight: 800,
+  color: '#94a3b8',
+  marginBottom: 12,
+  letterSpacing: '0.08em',
 }
 
 const metricValueStyle: CSSProperties = {
-  fontSize: 30,
-  lineHeight: 1.1,
+  fontSize: 34,
+  lineHeight: 1.05,
   fontWeight: 800,
-  color: '#111827',
+  color: '#0f172a',
   marginBottom: 8,
 }
 
 const metricHelperStyle: CSSProperties = {
   fontSize: 12,
+  lineHeight: 1.6,
   color: '#94a3b8',
 }
 
@@ -428,36 +536,40 @@ const contentGridStyle: CSSProperties = {
   display: 'grid',
   gridTemplateColumns: '1.1fr 1fr',
   gap: 16,
-  marginBottom: 16,
 }
 
 const cardStyle: CSSProperties = {
-  background: '#ffffff',
-  borderRadius: 20,
-  padding: 20,
-  border: '1px solid #eceef3',
+  background: 'rgba(255,255,255,0.92)',
+  borderRadius: 26,
+  padding: 22,
+  border: '1px solid #e9edf5',
   boxShadow: '0 12px 30px rgba(15, 23, 42, 0.05)',
 }
 
+const cardStrongStyle: CSSProperties = {
+  boxShadow: '0 18px 38px rgba(15, 23, 42, 0.08)',
+  background: 'linear-gradient(180deg, #ffffff 0%, #fbfcff 100%)',
+}
+
 const sectionEyebrowStyle: CSSProperties = {
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 800,
   letterSpacing: '0.14em',
-  color: '#9ca3af',
+  color: '#94a3b8',
   marginBottom: 8,
 }
 
 const sectionTitleStyle: CSSProperties = {
   margin: 0,
-  fontSize: 24,
+  fontSize: 22,
   fontWeight: 800,
-  color: '#111827',
+  color: '#0f172a',
 }
 
 const summaryListStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 12,
+  gap: 10,
   marginTop: 18,
 }
 
@@ -466,43 +578,45 @@ const summaryRowStyle: CSSProperties = {
   justifyContent: 'space-between',
   alignItems: 'center',
   gap: 12,
-  padding: '14px 16px',
-  borderRadius: 14,
-  background: '#f8fafc',
-  border: '1px solid #eef2f7',
+  minHeight: 48,
+  padding: '0 16px',
+  borderRadius: 16,
+  background: '#ffffff',
+  border: '1px solid #edf1f7',
 }
 
 const summaryLabelStyle: CSSProperties = {
   fontSize: 13,
-  color: '#6b7280',
+  color: '#64748b',
   fontWeight: 600,
 }
 
 const summaryValueStyle: CSSProperties = {
   fontSize: 14,
-  color: '#111827',
+  color: '#0f172a',
   fontWeight: 800,
 }
 
 const noteBoxStyle: CSSProperties = {
-  marginTop: 16,
+  marginTop: 18,
   padding: 16,
-  borderRadius: 16,
-  background: '#111827',
+  borderRadius: 18,
+  background: '#0f172a',
 }
 
 const noteTitleStyle: CSSProperties = {
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 800,
+  letterSpacing: '0.12em',
   color: '#fca5a5',
   marginBottom: 8,
 }
 
 const noteTextStyle: CSSProperties = {
   margin: 0,
+  color: '#e2e8f0',
   fontSize: 13,
-  lineHeight: 1.7,
-  color: '#e5e7eb',
+  lineHeight: 1.8,
 }
 
 const activityListStyle: CSSProperties = {
@@ -518,8 +632,8 @@ const activityItemStyle: CSSProperties = {
   alignItems: 'center',
   gap: 12,
   padding: '14px 16px',
-  borderRadius: 14,
-  border: '1px solid #eef2f7',
+  borderRadius: 16,
+  border: '1px solid #edf1f7',
   background: '#ffffff',
 }
 
@@ -530,8 +644,8 @@ const activityTextWrapStyle: CSSProperties = {
 
 const activityTitleStyle: CSSProperties = {
   fontSize: 14,
-  fontWeight: 700,
-  color: '#111827',
+  fontWeight: 800,
+  color: '#0f172a',
   marginBottom: 6,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -540,8 +654,8 @@ const activityTitleStyle: CSSProperties = {
 
 const activityMetaStyle: CSSProperties = {
   fontSize: 12,
-  color: '#6b7280',
-  lineHeight: 1.5,
+  color: '#64748b',
+  lineHeight: 1.6,
 }
 
 const openButtonStyle: CSSProperties = {
@@ -560,10 +674,10 @@ const openButtonStyle: CSSProperties = {
 
 const emptyStateStyle: CSSProperties = {
   padding: '18px 16px',
-  borderRadius: 14,
-  background: '#f8fafc',
-  border: '1px solid #eef2f7',
-  color: '#6b7280',
+  borderRadius: 16,
+  background: '#ffffff',
+  border: '1px solid #edf1f7',
+  color: '#64748b',
   fontSize: 14,
 }
 
@@ -582,8 +696,9 @@ const badgeStyle: CSSProperties = {
   borderRadius: 999,
   fontSize: 12,
   fontWeight: 800,
-  color: '#dc2626',
-  background: '#fef2f2',
+  color: '#334155',
+  background: '#ffffff',
+  border: '1px solid #e7ebf3',
 }
 
 const tableWrapStyle: CSSProperties = {
@@ -602,32 +717,32 @@ const thStyle: CSSProperties = {
   fontWeight: 800,
   color: '#94a3b8',
   padding: '14px 12px',
-  borderBottom: '1px solid #e5e7eb',
+  borderBottom: '1px solid #e7ebf3',
 }
 
 const tdStyle: CSSProperties = {
   padding: '16px 12px',
   borderBottom: '1px solid #eef2f7',
   fontSize: 14,
-  color: '#111827',
+  color: '#0f172a',
   verticalAlign: 'middle',
 }
 
 const rowStyle: CSSProperties = {
-  background: '#ffffff',
+  background: 'transparent',
 }
 
 const emptyCellStyle: CSSProperties = {
   padding: '24px 12px',
   textAlign: 'center',
-  color: '#6b7280',
+  color: '#64748b',
   fontSize: 14,
 }
 
 const channelLinkStyle: CSSProperties = {
-  color: '#111827',
+  color: '#0f172a',
   textDecoration: 'none',
-  fontWeight: 700,
+  fontWeight: 800,
 }
 
 const statusActiveBadgeStyle: CSSProperties = {
