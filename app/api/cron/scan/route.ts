@@ -24,6 +24,3 @@ export async function POST() {
     )
   }
 }
-git add .
-git commit -m "temporarily disable cron auth for testing"
-git push
