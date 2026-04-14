@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'r
 import Sidebar from './sidebar'
 import ScannerControls from './scanner-controls'
 import VideoTable from './video-table'
+import SurgeVideosPanel from './surge-videos-panel'
 
 type ChannelItem = {
   channel_id: string
@@ -288,6 +289,7 @@ export default function DashboardClient() {
 
             <div style={{ marginTop: 16 }}>
               <ScannerControls onDone={refreshDashboard} />
+              <SurgeVideosPanel />
             </div>
           </div>
         </section>
