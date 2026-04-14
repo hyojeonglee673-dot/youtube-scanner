@@ -1,6 +1,10 @@
+import { unstable_noStore as noStore } from 'next/cache'
 import ScannerControls from './components/scanner-controls'
 import VideoTable from './components/video-table'
 import { getDashboardData } from '../lib/scanner'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 function formatDate(value: string | null) {
   if (!value) return '-'
@@ -8,6 +12,8 @@ function formatDate(value: string | null) {
 }
 
 export default async function HomePage() {
+  noStore()
+
   const { channels, videos } = await getDashboardData()
 
   return (

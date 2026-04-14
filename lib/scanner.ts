@@ -120,7 +120,7 @@ export async function getDashboardData() {
   const { data: channels, error: channelError } = await supabaseAdmin
     .from('channels')
     .select('*')
-    .order('created_at', { ascending: false })
+    .order('last_scanned_at', { ascending: false })
 
   if (channelError) {
     throw new Error(`channels 조회 실패: ${channelError.message}`)
