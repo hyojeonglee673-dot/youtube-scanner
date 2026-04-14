@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useState } from 'react'
+import { FormEvent, useState, type CSSProperties } from 'react'
 
 type Props = {
   onDone?: () => void | Promise<void>
@@ -75,62 +75,127 @@ export default function ScannerControls({ onDone }: Props) {
   }
 
   return (
-    <div
-      style={{
-        border: '1px solid #ddd',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 24,
-        background: '#fafafa',
-      }}
-    >
-      <form onSubmit={handleAddChannel} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="@GoogleDevelopers 또는 채널 URL"
-          style={{
-            flex: 1,
-            minWidth: 280,
-            padding: '12px 14px',
-            border: '1px solid #ccc',
-            borderRadius: 8,
-          }}
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            padding: '12px 16px',
-            borderRadius: 8,
-            border: 'none',
-            background: '#111827',
-            color: 'white',
-            cursor: 'pointer',
-          }}
-        >
-          채널 등록
-        </button>
-        <button
-          type="button"
-          onClick={handleScanAll}
-          disabled={loading}
-          style={{
-            padding: '12px 16px',
-            borderRadius: 8,
-            border: '1px solid #111827',
-            background: 'white',
-            color: '#111827',
-            cursor: 'pointer',
-          }}
-        >
-          전체 스캔
-        </button>
+    <div style={wrapStyle}>
+      <form onSubmit={handleAddChannel} style={formStyle}>
+        <div style={inputWrapStyle}>
+          <label style={labelStyle}>채널 입력</label>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="@GoogleDevelopers 또는 채널 URL"
+            style={inputStyle}
+            disabled={loading}
+          />
+        </div>
+
+        <div style={buttonGroupStyle}>
+          <button type="submit" disabled={loading} style={primaryButtonStyle}>
+            {loading ? '처리 중...' : '채널 등록'}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleScanAll}
+            disabled={loading}
+            style={secondaryButtonStyle}
+          >
+            {loading ? '처리 중...' : '전체 스캔'}
+          </button>
+        </div>
       </form>
 
-      <p style={{ marginTop: 12, color: '#374151' }}>
-        {message || '채널을 등록하면 최신 영상 10개를 바로 가져옵니다.'}
-      </p>
+      <div style={messageBoxStyle}>
+        <div style={messageLabelStyle}>상태 메시지</div>
+        <p style={messageTextStyle}>
+          {message || '채널을 등록하면 최신 영상 10개를 바로 가져옵니다.'}
+        </p>
+      </div>
     </div>
   )
+}
+
+const wrapStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 16,
+}
+
+const formStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 14,
+}
+
+const inputWrapStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+}
+
+const labelStyle: CSSProperties = {
+  fontSize: 12,
+  fontWeight: 700,
+  color: '#6b7280',
+}
+
+const inputStyle: CSSProperties = {
+  width: '100%',
+  padding: '14px 16px',
+  border: '1px solid #d1d5db',
+  borderRadius: 14,
+  fontSize: 14,
+  outline: 'none',
+  background: '#ffffff',
+  color: '#111827',
+}
+
+const buttonGroupStyle: CSSProperties = {
+  display: 'flex',
+  gap: 10,
+  flexWrap: 'wrap',
+}
+
+const primaryButtonStyle: CSSProperties = {
+  padding: '12px 16px',
+  borderRadius: 12,
+  border: 'none',
+  background: '#111827',
+  color: '#ffffff',
+  fontWeight: 700,
+  fontSize: 14,
+  cursor: 'pointer',
+  minWidth: 120,
+}
+
+const secondaryButtonStyle: CSSProperties = {
+  padding: '12px 16px',
+  borderRadius: 12,
+  border: '1px solid #d1d5db',
+  background: '#ffffff',
+  color: '#111827',
+  fontWeight: 700,
+  fontSize: 14,
+  cursor: 'pointer',
+  minWidth: 120,
+}
+
+const messageBoxStyle: CSSProperties = {
+  border: '1px solid #ececec',
+  borderRadius: 16,
+  background: '#fafafa',
+  padding: 14,
+}
+
+const messageLabelStyle: CSSProperties = {
+  fontSize: 12,
+  fontWeight: 700,
+  color: '#9ca3af',
+  marginBottom: 6,
+}
+
+const messageTextStyle: CSSProperties = {
+  margin: 0,
+  color: '#374151',
+  fontSize: 14,
+  lineHeight: 1.6,
 }

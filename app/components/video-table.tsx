@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
 
 type VideoItem = {
   video_id: string
@@ -12,219 +12,286 @@ type VideoItem = {
   published_at: string | null
 }
 
-type Props = {
-  videos: VideoItem[]
-}
-
-function formatNumber(value: number) {
-  return new Intl.NumberFormat('ko-KR').format(value)
-}
-
 function formatDate(value: string | null) {
   if (!value) return '-'
   return new Date(value).toLocaleString('ko-KR')
 }
 
-function getViewsPerHour(viewCount: number, publishedAt: string | null) {
-  if (!publishedAt) return 0
-
-  const hours = Math.max(
-    (Date.now() - new Date(publishedAt).getTime()) / (1000 * 60 * 60),
-    1
-  )
-
-  return Math.round(viewCount / hours)
+function formatViews(value: number) {
+  return new Intl.NumberFormat('ko-KR').format(value || 0)
 }
 
-export default function VideoTable({ videos }: Props) {
-  const [lookbackHours, setLookbackHours] = useState('48')
-  const [minViews, setMinViews] = useState('1000')
-  const [sortBy, setSortBy] = useState('viewsPerHour')
-
-  const filteredVideos = useMemo(() => {
-    let result = [...videos]
-
-    if (lookbackHours !== 'all') {
-      const cutoff = Date.now() - Number(lookbackHours) * 60 * 60 * 1000
-      result = result.filter((video) => {
-        if (!video.published_at) return false
-        return new Date(video.published_at).getTime() >= cutoff
-      })
-    }
-
-    const minViewsNumber = Number(minViews || 0)
-    result = result.filter((video) => Number(video.view_count || 0) >= minViewsNumber)
-
-    result.sort((a, b) => {
-      if (sortBy === 'views') {
-        return Number(b.view_count || 0) - Number(a.view_count || 0)
-      }
-
-      const aVph = getViewsPerHour(Number(a.view_count || 0), a.published_at)
-      const bVph = getViewsPerHour(Number(b.view_count || 0), b.published_at)
-      return bVph - aVph
-    })
-
-    return result
-  }, [videos, lookbackHours, minViews, sortBy])
+export default function VideoTable({ videos }: { videos: VideoItem[] }) {
+  if (!videos || videos.length === 0) {
+    return (
+      <div style={emptyWrapStyle}>
+        <div style={emptyTitleStyle}>아직 수집된 영상이 없습니다</div>
+        <p style={emptyTextStyle}>
+          채널을 등록하고 스캔을 실행하면 최신 영상이 여기에 표시됩니다.
+        </p>
+      </div>
+    )
+  }
 
   return (
-    <section>
-      <h2 style={{ fontSize: 24, marginBottom: 12 }}>필터된 인기 영상</h2>
-
-      <div
-        style={{
-          display: 'flex',
-          gap: 12,
-          flexWrap: 'wrap',
-          marginBottom: 16,
-          padding: 16,
-          border: '1px solid #e5e7eb',
-          borderRadius: 12,
-          background: '#fafafa',
-        }}
-      >
+    <div style={wrapStyle}>
+      <div style={tableHeaderStyle}>
         <div>
-          <label style={labelStyle}>업로드 기준</label>
-          <select
-            value={lookbackHours}
-            onChange={(e) => setLookbackHours(e.target.value)}
-            style={inputStyle}
-          >
-            <option value="all">전체</option>
-            <option value="24">최근 24시간</option>
-            <option value="48">최근 48시간</option>
-            <option value="168">최근 7일</option>
-          </select>
+          <div style={eyebrowStyle}>VIDEO MONITORING</div>
+          <h3 style={titleStyle}>최근 수집 영상 목록</h3>
         </div>
 
-        <div>
-          <label style={labelStyle}>최소 조회수</label>
-          <input
-            type="number"
-            value={minViews}
-            onChange={(e) => setMinViews(e.target.value)}
-            placeholder="예: 1000"
-            style={inputStyle}
-          />
-        </div>
-
-        <div>
-          <label style={labelStyle}>정렬</label>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            style={inputStyle}
-          >
-            <option value="viewsPerHour">시간당 조회수순</option>
-            <option value="views">총 조회수순</option>
-          </select>
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'end',
-            fontSize: 14,
-            color: '#374151',
-            paddingBottom: 10,
-          }}
-        >
-          결과 {formatNumber(filteredVideos.length)}개
-        </div>
+        <div style={countBadgeStyle}>{videos.length}개 영상</div>
       </div>
 
-      <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 12 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead style={{ background: '#f9fafb' }}>
+      <div style={tableWrapStyle}>
+        <table style={tableStyle}>
+          <thead>
             <tr>
-              <th style={thStyle}>썸네일</th>
-              <th style={thStyle}>제목</th>
+              <th style={thStyle}>영상</th>
               <th style={thStyle}>채널</th>
               <th style={thStyle}>조회수</th>
-              <th style={thStyle}>시간당 조회수</th>
-              <th style={thStyle}>업로드 시간</th>
+              <th style={thStyle}>게시일</th>
+              <th style={thStyle}>바로가기</th>
             </tr>
           </thead>
+
           <tbody>
-            {filteredVideos.length === 0 ? (
-              <tr>
-                <td colSpan={6} style={emptyCellStyle}>
-                  조건에 맞는 영상이 없습니다.
+            {videos.map((video) => (
+              <tr key={video.video_id} style={rowStyle}>
+                <td style={tdStyle}>
+                  <div style={videoCellStyle}>
+                    <div style={thumbWrapStyle}>
+                      {video.thumbnail_url ? (
+                        <img
+                          src={video.thumbnail_url}
+                          alt={video.title}
+                          style={thumbStyle}
+                        />
+                      ) : (
+                        <div style={thumbPlaceholderStyle}>No Image</div>
+                      )}
+                    </div>
+
+                    <div style={videoMetaStyle}>
+                      <div style={videoTitleStyle}>{video.title}</div>
+                      <div style={videoIdStyle}>{video.video_id}</div>
+                    </div>
+                  </div>
+                </td>
+
+                <td style={tdStyle}>
+                  <span style={channelBadgeStyle}>
+                    {video.source_channel_name || '채널명 없음'}
+                  </span>
+                </td>
+
+                <td style={tdStyle}>
+                  <strong style={viewsStyle}>{formatViews(video.view_count)}</strong>
+                </td>
+
+                <td style={tdStyle}>
+                  <span style={dateStyle}>{formatDate(video.published_at)}</span>
+                </td>
+
+                <td style={tdStyle}>
+                  <a
+                    href={video.youtube_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={linkButtonStyle}
+                  >
+                    열기
+                  </a>
                 </td>
               </tr>
-            ) : (
-              filteredVideos.map((video) => (
-                <tr key={video.video_id}>
-                  <td style={tdStyle}>
-                    {video.thumbnail_url ? (
-                      <img
-                        src={video.thumbnail_url}
-                        alt={video.title}
-                        width={120}
-                        style={{ borderRadius: 8, height: 'auto' }}
-                      />
-                    ) : (
-                      '-'
-                    )}
-                  </td>
-                  <td style={tdStyle}>
-                    <a href={video.youtube_url} target="_blank" rel="noreferrer">
-                      {video.title}
-                    </a>
-                  </td>
-                  <td style={tdStyle}>{video.source_channel_name}</td>
-                  <td style={tdStyle}>{formatNumber(Number(video.view_count || 0))}</td>
-                  <td style={tdStyle}>
-                    {formatNumber(
-                      getViewsPerHour(
-                        Number(video.view_count || 0),
-                        video.published_at
-                      )
-                    )}
-                  </td>
-                  <td style={tdStyle}>{formatDate(video.published_at)}</td>
-                </tr>
-              ))
-            )}
+            ))}
           </tbody>
         </table>
       </div>
-    </section>
+    </div>
   )
 }
 
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  marginBottom: 6,
-  fontSize: 13,
-  color: '#374151',
+const wrapStyle: CSSProperties = {
+  background: '#ffffff',
+  border: '1px solid #ececec',
+  borderRadius: 24,
+  padding: 22,
+  boxShadow: '0 8px 24px rgba(15,23,42,0.04)',
 }
 
-const inputStyle: React.CSSProperties = {
-  padding: '10px 12px',
-  border: '1px solid #d1d5db',
-  borderRadius: 8,
-  minWidth: 160,
-  fontSize: 14,
+const tableHeaderStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: 12,
+  flexWrap: 'wrap',
+  marginBottom: 18,
 }
 
-const thStyle: React.CSSProperties = {
+const eyebrowStyle: CSSProperties = {
+  fontSize: 11,
+  fontWeight: 800,
+  letterSpacing: '0.12em',
+  color: '#9ca3af',
+  marginBottom: 8,
+}
+
+const titleStyle: CSSProperties = {
+  margin: 0,
+  fontSize: 22,
+  fontWeight: 800,
+  color: '#111827',
+}
+
+const countBadgeStyle: CSSProperties = {
+  background: '#f3f4f6',
+  color: '#111827',
+  borderRadius: 999,
+  padding: '8px 12px',
+  fontSize: 12,
+  fontWeight: 700,
+}
+
+const tableWrapStyle: CSSProperties = {
+  overflowX: 'auto',
+}
+
+const tableStyle: CSSProperties = {
+  width: '100%',
+  borderCollapse: 'collapse',
+}
+
+const thStyle: CSSProperties = {
   textAlign: 'left',
-  padding: 12,
+  padding: '14px 12px',
   borderBottom: '1px solid #e5e7eb',
-  fontSize: 14,
+  background: '#fafafa',
+  color: '#6b7280',
+  fontSize: 13,
+  whiteSpace: 'nowrap',
 }
 
-const tdStyle: React.CSSProperties = {
-  padding: 12,
+const tdStyle: CSSProperties = {
+  padding: '16px 12px',
   borderBottom: '1px solid #f1f5f9',
   verticalAlign: 'top',
   fontSize: 14,
 }
 
-const emptyCellStyle: React.CSSProperties = {
-  padding: 20,
+const rowStyle: CSSProperties = {
+  background: '#ffffff',
+}
+
+const videoCellStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: 14,
+  minWidth: 320,
+}
+
+const thumbWrapStyle: CSSProperties = {
+  width: 120,
+  height: 68,
+  borderRadius: 12,
+  overflow: 'hidden',
+  background: '#f3f4f6',
+  flexShrink: 0,
+  border: '1px solid #ececec',
+}
+
+const thumbStyle: CSSProperties = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+  display: 'block',
+}
+
+const thumbPlaceholderStyle: CSSProperties = {
+  width: '100%',
+  height: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: 12,
+  color: '#9ca3af',
+  background: '#f9fafb',
+}
+
+const videoMetaStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+  minWidth: 0,
+}
+
+const videoTitleStyle: CSSProperties = {
+  fontWeight: 700,
+  color: '#111827',
+  lineHeight: 1.45,
+  wordBreak: 'break-word',
+}
+
+const videoIdStyle: CSSProperties = {
+  fontSize: 12,
+  color: '#9ca3af',
+  wordBreak: 'break-all',
+}
+
+const channelBadgeStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '6px 10px',
+  borderRadius: 999,
+  background: '#fef2f2',
+  color: '#b91c1c',
+  fontSize: 12,
+  fontWeight: 700,
+}
+
+const viewsStyle: CSSProperties = {
+  color: '#111827',
+  fontSize: 15,
+}
+
+const dateStyle: CSSProperties = {
+  color: '#4b5563',
+  lineHeight: 1.5,
+}
+
+const linkButtonStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '10px 14px',
+  borderRadius: 12,
+  background: '#111827',
+  color: '#ffffff',
+  textDecoration: 'none',
+  fontSize: 13,
+  fontWeight: 700,
+  whiteSpace: 'nowrap',
+}
+
+const emptyWrapStyle: CSSProperties = {
+  background: '#ffffff',
+  border: '1px solid #ececec',
+  borderRadius: 24,
+  padding: 32,
+  boxShadow: '0 8px 24px rgba(15,23,42,0.04)',
   textAlign: 'center',
+}
+
+const emptyTitleStyle: CSSProperties = {
+  fontSize: 18,
+  fontWeight: 800,
+  color: '#111827',
+  marginBottom: 10,
+}
+
+const emptyTextStyle: CSSProperties = {
+  margin: 0,
   color: '#6b7280',
+  lineHeight: 1.6,
 }
