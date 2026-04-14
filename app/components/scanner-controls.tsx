@@ -1,10 +1,12 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 
-export default function ScannerControls() {
-  const router = useRouter()
+type Props = {
+  onDone?: () => void | Promise<void>
+}
+
+export default function ScannerControls({ onDone }: Props) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -34,10 +36,10 @@ export default function ScannerControls() {
 
       setMessage(`등록 완료: ${data.channel.channelName}`)
       setInput('')
-      
-      setTimeout(() => {
-  window.location.reload()
-}, 300)
+
+      if (onDone) {
+        await onDone()
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '오류가 발생했습니다.')
     } finally {
@@ -62,9 +64,9 @@ export default function ScannerControls() {
 
       setMessage('전체 스캔 완료')
 
-setTimeout(() => {
-  window.location.reload()
-}, 300)
+      if (onDone) {
+        await onDone()
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '오류가 발생했습니다.')
     } finally {
