@@ -3,10 +3,8 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import Sidebar from './sidebar'
 import ScannerControls from './scanner-controls'
-import VideoTable from './video-table'
-import SurgeVideosPanel from './surge-videos-panel'
-import DailySurgeVideosCard from '../components/dashboard/DailySurgeVideosCard';
-import RecentCollectedVideosClient from '../components/dashboard/RecentCollectedVideosClient';
+import DailySurgeVideosCard from './DailySurgeVideosCard'
+import RecentCollectedVideosClient from './RecentCollectedVideosClient'
 
 
 type ChannelItem = {
@@ -163,7 +161,7 @@ export default function DashboardClient() {
     }
   }, [channels, videos])
 
-  const displayVideos = useMemo(() => {
+   const displayVideos = useMemo(() => {
     const sorted = [...videos].sort((a, b) => {
       if (settings.recentFirst) {
         const aTime = a.published_at ? new Date(a.published_at).getTime() : 0
@@ -176,6 +174,36 @@ export default function DashboardClient() {
 
     return sorted.slice(0, settings.videoLimit)
   }, [videos, settings])
+
+  const yesterdayTopics = useMemo<VideoItem[]>(() => {
+    const now = new Date()
+    const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+
+    const yesterday = new Date(kstNow)
+    yesterday.setDate(kstNow.getDate() - 1)
+
+    const yyyy = yesterday.getFullYear()
+    const mm = String(yesterday.getMonth() + 1).padStart(2, '0')
+    const dd = String(yesterday.getDate()).padStart(2, '0')
+    const yesterdayKey = `${yyyy}-${mm}-${dd}`
+
+    return [...videos]
+      .filter((video: VideoItem) => {
+        if (!video.published_at) return false
+
+        const d = new Date(video.published_at)
+        if (Number.isNaN(d.getTime())) return false
+
+        const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000)
+        const y = kst.getFullYear()
+        const m = String(kst.getMonth() + 1).padStart(2, '0')
+        const day = String(kst.getDate()).padStart(2, '0')
+
+        return `${y}-${m}-${day}` === yesterdayKey
+      })
+      .sort((a, b) => (b.view_count || 0) - (a.view_count || 0))
+      .slice(0, 8)
+  }, [videos])
 
   return (
     <div style={shellStyle}>
@@ -236,66 +264,47 @@ export default function DashboardClient() {
         </section>
 
         <section style={topGridStyle}>
-          <div
-            style={{
-              ...cardStyle,
-              ...(settings.highlightCards ? cardStrongStyle : {}),
-            }}
-          >
-            <div style={sectionHeaderStyle}>
-              <div>
-<DailySurgeVideosCard />
+  <DailySurgeVideosCard />
 
-              </div>
+  <div
+    style={{
+      ...cardStyle,
+      ...(settings.highlightCards ? cardStrongStyle : {}),
+    }}
+  >
+    <div style={sectionHeaderStyle}>
+      <div>
+        <div style={sectionEyebrowStyle}>QUICK ACTIONS</div>
+        <h2 style={sectionTitleStyle}>빠른 실행</h2>
+      </div>
 
-              <span style={liveBadgeStyle}>LIVE</span>
-            </div>
+      <span style={liveBadgeStyle}>LIVE</span>
+    </div>
 
-            <div style={statusPanelStyle}>
-              <div style={bubbleChartWrapStyle}>
-                {[36, 62, 48, 84, 56, 44, 72, 58].map((size, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      ...bubbleStyle,
-                      width: size,
-                      height: size,
-                      opacity: index === 3 || index === 6 ? 1 : 0.58,
-                    }}
-                  />
-                ))}
-              </div>
+    <div style={{ marginTop: 16 }}>
+      <ScannerControls />
+    </div>
 
-              <div style={statusListStyle}>
-                <StatusRow label="현재 상태" value={loading ? '확인 중...' : '정상 운영'} />
-                <StatusRow label="최근 스캔" value={loading ? '...' : stats.latestScan} />
-                <StatusRow
-                  label="채널 커버리지"
-                  value={loading ? '...' : `${stats.scannedChannels}/${stats.totalChannels}`}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div
-            style={{
-              ...cardStyle,
-              ...(settings.highlightCards ? cardStrongStyle : {}),
-            }}
-          >
-            <div style={sectionHeaderStyle}>
-              <div>
-                <div style={sectionEyebrowStyle}>QUICK ACTIONS</div>
-                <h2 style={sectionTitleStyle}>빠른 실행</h2>
-              </div>
-            </div>
-
-            <div style={{ marginTop: 16 }}>
-              <ScannerControls onDone={refreshDashboard} />
-              <SurgeVideosPanel />
-            </div>
-          </div>
-        </section>
+    <div
+      style={{
+        marginTop: 16,
+        padding: 16,
+        borderRadius: 16,
+        background: '#0f172a',
+        color: '#fff',
+        fontSize: 13,
+        lineHeight: 1.7,
+      }}
+    >
+      <strong style={{ display: 'block', marginBottom: 8 }}>운영 메모</strong>
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <li>새 채널 등록 후 바로 전체 스캔을 실행해 주세요.</li>
+        <li>대시보드 중앙에는 당일 급상승 영상만 표시합니다.</li>
+        <li>최근 수집 영상은 아래 섹션에서 조회수 필터로 확인할 수 있습니다.</li>
+      </ul>
+    </div>
+  </div>
+</section>
 
         <section
           style={{
@@ -368,6 +377,76 @@ export default function DashboardClient() {
             </table>
           </div>
         </section>
+<section
+  style={{
+    ...cardStyle,
+    ...(settings.highlightCards ? cardStrongStyle : {}),
+    marginTop: 16,
+  }}
+>
+  <div style={sectionHeaderStyle}>
+    <div>
+      <div style={sectionEyebrowStyle}>YESTERDAY TOPICS</div>
+      <h2 style={sectionTitleStyle}>전날 토픽 요약</h2>
+    </div>
+
+    <span style={countBadgeStyle}>{`${yesterdayTopics.length}개`}</span>
+  </div>
+
+  <div style={{ marginTop: 16, display: 'grid', gap: 10 }}>
+    {yesterdayTopics.length === 0 ? (
+      <div style={{ color: '#64748b', fontSize: 14 }}>
+        전날 기준으로 표시할 토픽이 없습니다.
+      </div>
+    ) : (
+      yesterdayTopics.map((item: VideoItem) => (
+
+        <a
+          key={item.video_id}
+          href={item.youtube_url}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr auto',
+            gap: 12,
+            alignItems: 'center',
+            padding: '12px 14px',
+            borderRadius: 14,
+            background: '#ffffff',
+            border: '1px solid #e9edf5',
+            textDecoration: 'none',
+            color: 'inherit',
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
+              {item.source_channel_name}
+            </div>
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: '#0f172a',
+                lineHeight: 1.45,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+              title={item.title}
+            >
+              {item.title}
+            </div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a' }}>
+            {formatNumber(item.view_count || 0)}
+          </div>
+        </a>
+      ))
+    )}
+  </div>
+</section>
 
         <section style={{ marginTop: 16 }}>
           <div style={sectionHeaderStyle}>
@@ -380,7 +459,7 @@ export default function DashboardClient() {
           </div>
 
           <div style={{ marginTop: 16 }}>
-            <VideoTable videos={displayVideos} />
+            <RecentCollectedVideosClient items={videos} />
           </div>
         </section>
       </main>
@@ -520,9 +599,11 @@ const statHelperStyle: CSSProperties = {
 
 const topGridStyle: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '1.2fr 0.8fr',
+  gridTemplateColumns: 'minmax(0, 1.6fr) minmax(320px, 420px)',
   gap: 16,
+  alignItems: 'start',
 }
+
 
 const cardStyle: CSSProperties = {
   background: 'rgba(255,255,255,0.92)',

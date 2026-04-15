@@ -58,9 +58,6 @@ function normalizeItem(item: any): SurgeVideo {
       item.viewCount ??
       item.view_count ??
       item.latest_view_count ??
-      item.latestViews ??
-      item.latest_views ??
-      item.views ??
       0
   )
 
@@ -69,8 +66,6 @@ function normalizeItem(item: any): SurgeVideo {
       item.delta_today ??
       item.todayDelta ??
       item.today_delta ??
-      item.viewIncrease ??
-      item.view_increase ??
       0
   )
 

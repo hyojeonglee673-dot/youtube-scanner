@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 type RawVideoItem = {
   video_id?: string
@@ -21,6 +21,8 @@ type Props = {
 }
 
 type SortOption = 'latest' | 'views_desc' | 'views_asc'
+
+const PAGE_SIZE = 10
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('ko-KR').format(value || 0)
@@ -49,17 +51,14 @@ function normalizeVideo(item: RawVideoItem) {
       (item.video_id ? `https://www.youtube.com/watch?v=${item.video_id}` : '#'),
     thumbnailUrl: item.thumbnail_url ?? null,
     viewCount: Number(item.view_count ?? 0),
-    date:
-      item.collected_at ??
-      item.created_at ??
-      item.published_at ??
-      null,
+    date: item.collected_at ?? item.created_at ?? item.published_at ?? null,
   }
 }
 
 export default function RecentCollectedVideosClient({ items }: Props) {
   const [minViews, setMinViews] = useState(0)
   const [sortBy, setSortBy] = useState<SortOption>('latest')
+  const [page, setPage] = useState(1)
 
   const normalized = useMemo(() => items.map(normalizeVideo), [items])
 
@@ -78,35 +77,67 @@ export default function RecentCollectedVideosClient({ items }: Props) {
     return list
   }, [normalized, minViews, sortBy])
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+
+  useEffect(() => {
+    setPage(1)
+  }, [minViews, sortBy, items])
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages)
+    }
+  }, [page, totalPages])
+
+  const pagedItems = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return filtered.slice(start, start + PAGE_SIZE)
+  }, [filtered, page])
+
   return (
     <div
       style={{
-        background: '#111827',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: '#ffffff',
+        border: '1px solid #e9edf5',
         borderRadius: 20,
         padding: 20,
-        color: '#fff',
+        boxShadow: '0 12px 30px rgba(15, 23, 42, 0.05)',
       }}
     >
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center',
+          alignItems: 'flex-end',
           gap: 12,
           flexWrap: 'wrap',
           marginBottom: 16,
         }}
       >
         <div>
-          <div style={{ fontSize: 12, color: '#93c5fd', marginBottom: 6 }}>
-            RECENT VIDEOS
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: '0.14em',
+              color: '#94a3b8',
+              marginBottom: 8,
+            }}
+          >
+            LATEST VIDEOS
           </div>
-          <h3 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: 22,
+              fontWeight: 800,
+              color: '#0f172a',
+            }}
+          >
             최근 수집 영상
           </h3>
-          <p style={{ margin: '6px 0 0', color: '#9ca3af', fontSize: 13 }}>
-            조회수 기준 필터와 정렬을 적용해 볼 수 있습니다.
+          <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: 13 }}>
+            게시판 형식으로 최근 수집 영상을 확인합니다. 한 페이지에 10개씩 표시됩니다.
           </p>
         </div>
 
@@ -115,11 +146,12 @@ export default function RecentCollectedVideosClient({ items }: Props) {
             value={minViews}
             onChange={(e) => setMinViews(Number(e.target.value))}
             style={{
-              background: '#1f2937',
-              color: '#fff',
-              border: '1px solid rgba(255,255,255,0.12)',
+              background: '#fff',
+              color: '#0f172a',
+              border: '1px solid #dbe3ee',
               borderRadius: 10,
               padding: '10px 12px',
+              fontSize: 13,
             }}
           >
             <option value={0}>전체 조회수</option>
@@ -133,11 +165,12 @@ export default function RecentCollectedVideosClient({ items }: Props) {
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
             style={{
-              background: '#1f2937',
-              color: '#fff',
-              border: '1px solid rgba(255,255,255,0.12)',
+              background: '#fff',
+              color: '#0f172a',
+              border: '1px solid #dbe3ee',
               borderRadius: 10,
               padding: '10px 12px',
+              fontSize: 13,
             }}
           >
             <option value="latest">최신순</option>
@@ -147,87 +180,208 @@ export default function RecentCollectedVideosClient({ items }: Props) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gap: 12 }}>
-        {filtered.length === 0 ? (
-          <div style={{ color: '#9ca3af', padding: '24px 0' }}>
-            조건에 맞는 영상이 없습니다.
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 12,
+          gap: 12,
+          flexWrap: 'wrap',
+        }}
+      >
+        <div
+          style={{
+            fontSize: 13,
+            color: '#64748b',
+            fontWeight: 600,
+          }}
+        >
+          전체 {filtered.length}개 중 {(page - 1) * PAGE_SIZE + 1}-
+          {Math.min(page * PAGE_SIZE, filtered.length)}개 표시
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+            disabled={page === 1}
+            style={{
+              border: '1px solid #dbe3ee',
+              background: page === 1 ? '#f8fafc' : '#ffffff',
+              color: page === 1 ? '#94a3b8' : '#0f172a',
+              borderRadius: 10,
+              padding: '8px 12px',
+              cursor: page === 1 ? 'default' : 'pointer',
+              fontWeight: 700,
+            }}
+          >
+            이전
+          </button>
+
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>
+            {page} / {totalPages}
           </div>
-        ) : (
-          filtered.map((item, index) => (
-            <a
-              key={item.videoId || `${item.title}-${index}`}
-              href={item.youtubeUrl}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '120px 1fr auto',
-                gap: 14,
-                alignItems: 'center',
-                textDecoration: 'none',
-                color: 'inherit',
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.06)',
-                borderRadius: 14,
-                padding: 12,
-              }}
-            >
-              <div
-                style={{
-                  width: 120,
-                  height: 68,
-                  borderRadius: 10,
-                  overflow: 'hidden',
-                  background: '#1f2937',
-                }}
-              >
-                {item.thumbnailUrl ? (
-                  <img
-                    src={item.thumbnailUrl}
-                    alt={item.title}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                ) : null}
-              </div>
 
-              <div style={{ minWidth: 0 }}>
-                <div
-                  style={{
-                    color: '#93c5fd',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    marginBottom: 4,
-                  }}
-                >
-                  {item.channelName}
-                </div>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 700,
-                    lineHeight: 1.45,
-                    marginBottom: 6,
-                  }}
-                >
-                  {item.title}
-                </div>
-                <div style={{ fontSize: 12, color: '#9ca3af' }}>
-                  수집 시각: {formatDateTime(item.date)}
-                </div>
-              </div>
+          <button
+            type="button"
+            onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={page === totalPages}
+            style={{
+              border: '1px solid #dbe3ee',
+              background: page === totalPages ? '#f8fafc' : '#ffffff',
+              color: page === totalPages ? '#94a3b8' : '#0f172a',
+              borderRadius: 10,
+              padding: '8px 12px',
+              cursor: page === totalPages ? 'default' : 'pointer',
+              fontWeight: 700,
+            }}
+          >
+            다음
+          </button>
+        </div>
+      </div>
 
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 4 }}>
-                  조회수
-                </div>
-                <div style={{ fontSize: 18, fontWeight: 800 }}>
-                  {formatNumber(item.viewCount)}
-                </div>
-              </div>
-            </a>
-          ))
-        )}
+      <div
+        style={{
+          overflowX: 'auto',
+          border: '1px solid #edf1f7',
+          borderRadius: 16,
+          background: '#fff',
+        }}
+      >
+        <table
+          style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            minWidth: 860,
+          }}
+        >
+          <thead>
+            <tr style={{ background: '#f8fafc' }}>
+              <th style={thStyle}>번호</th>
+              <th style={thStyle}>채널명</th>
+              <th style={thStyle}>제목</th>
+              <th style={thStyle}>조회수</th>
+              <th style={thStyle}>수집 시각</th>
+              <th style={thStyle}>링크</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {pagedItems.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={emptyCellStyle}>
+                  조건에 맞는 영상이 없습니다.
+                </td>
+              </tr>
+            ) : (
+              pagedItems.map((item, index) => (
+                <tr key={item.videoId || `${item.title}-${index}`} style={rowStyle}>
+                  <td style={tdStyle}>{(page - 1) * PAGE_SIZE + index + 1}</td>
+                  <td style={tdStyle}>
+                    <div
+                      style={{
+                        maxWidth: 180,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        fontWeight: 700,
+                        color: '#334155',
+                      }}
+                      title={item.channelName}
+                    >
+                      {item.channelName || '-'}
+                    </div>
+                  </td>
+                  <td style={tdStyle}>
+                    <div
+                      style={{
+                        maxWidth: 380,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        color: '#0f172a',
+                        fontWeight: 600,
+                      }}
+                      title={item.title}
+                    >
+                      {item.title || '-'}
+                    </div>
+                  </td>
+                  <td style={tdStyle}>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '6px 10px',
+                        borderRadius: 999,
+                        background: '#eff6ff',
+                        color: '#1d4ed8',
+                        fontWeight: 800,
+                        fontSize: 13,
+                      }}
+                    >
+                      {formatNumber(item.viewCount)}
+                    </span>
+                  </td>
+                  <td style={tdStyle}>{formatDateTime(item.date)}</td>
+                  <td style={tdStyle}>
+                    <a
+                      href={item.youtubeUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '8px 12px',
+                        borderRadius: 10,
+                        background: '#0f172a',
+                        color: '#fff',
+                        textDecoration: 'none',
+                        fontWeight: 700,
+                        fontSize: 13,
+                      }}
+                    >
+                      열기
+                    </a>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )
+}
+
+const thStyle: React.CSSProperties = {
+  textAlign: 'left',
+  padding: '14px 16px',
+  fontSize: 12,
+  fontWeight: 800,
+  color: '#64748b',
+  borderBottom: '1px solid #edf1f7',
+  whiteSpace: 'nowrap',
+}
+
+const tdStyle: React.CSSProperties = {
+  padding: '14px 16px',
+  fontSize: 14,
+  color: '#334155',
+  borderBottom: '1px solid #f1f5f9',
+  verticalAlign: 'middle',
+}
+
+const rowStyle: React.CSSProperties = {
+  background: '#ffffff',
+}
+
+const emptyCellStyle: React.CSSProperties = {
+  padding: '32px 16px',
+  textAlign: 'center',
+  color: '#94a3b8',
+  fontSize: 14,
 }
