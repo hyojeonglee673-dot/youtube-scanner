@@ -17,6 +17,28 @@ type SurgeVideo = {
 function formatNumber(value: number) {
   return new Intl.NumberFormat('ko-KR').format(value || 0)
 }
+function parseNumberLike(value: unknown): number {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0
+  }
+
+  if (typeof value === 'string') {
+    const cleaned = value.replace(/,/g, '').trim()
+    const parsed = Number(cleaned)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  return 0
+}
+
+function pickFirst<T>(...values: T[]): T | undefined {
+  for (const value of values) {
+    if (value !== undefined && value !== null && value !== '') {
+      return value
+    }
+  }
+  return undefined
+}
 
 function formatDateTime(value?: string | null) {
   if (!value) return '-'
@@ -32,9 +54,15 @@ function formatDateTime(value?: string | null) {
 }
 
 function normalizeItem(item: any): SurgeVideo {
-  const videoId = item.videoId ?? item.video_id ?? item.id ?? ''
+  const videoId =
+    item.videoId ??
+    item.video_id ??
+    item.id ??
+    ''
 
-  const title = item.title ?? ''
+  const title =
+    item.title ??
+    ''
 
   const channelName =
     item.channelName ??
@@ -54,31 +82,35 @@ function normalizeItem(item: any): SurgeVideo {
 
   const currentViews = Number(
     item.currentViews ??
-      item.current_views ??
-      item.viewCount ??
-      item.view_count ??
-      item.latest_view_count ??
-      item.latestViews ??
-      item.latest_views ??
-      item.views ??
-      0
+    item.current_views ??
+    item.current_view_count ??
+    item.viewCount ??
+    item.view_count ??
+    item.latest_view_count ??
+    item.latestViews ??
+    item.latest_views ??
+    item.views ??
+    0
   )
 
   const deltaToday = Number(
     item.deltaToday ??
-      item.delta_today ??
-      item.todayDelta ??
-      item.today_delta ??
-      item.viewIncrease ??
-      item.view_increase ??
-      0
+    item.delta_today ??
+    item.todayDelta ??
+    item.today_delta ??
+    item.today_views ??
+    item.viewIncrease ??
+    item.view_increase ??
+    0
   )
 
   const delta1hRaw =
     item.delta1h ??
     item.delta_1h ??
     item.hourDelta ??
-    item.hour_delta
+    item.hour_delta ??
+    item.last_hour_views ??
+    item.hourly_avg_views
 
   const delta1h =
     delta1hRaw === undefined || delta1hRaw === null
@@ -90,6 +122,7 @@ function normalizeItem(item: any): SurgeVideo {
     item.last_captured_at ??
     item.capturedHour ??
     item.captured_hour ??
+    item.published_at ??
     null
 
   return {
@@ -104,6 +137,8 @@ function normalizeItem(item: any): SurgeVideo {
     lastCapturedAt,
   }
 }
+
+
 
 export default function DailySurgeVideosCard() {
   const [items, setItems] = useState<SurgeVideo[]>([])
@@ -126,6 +161,8 @@ export default function DailySurgeVideosCard() {
 
       const data = await res.json()
       console.log('surge api response', data)
+console.log('first surge item', Array.isArray(data?.items) ? data.items[0] : Array.isArray(data) ? data[0] : null)
+
 
       const rawItems = Array.isArray(data?.items)
         ? data.items
