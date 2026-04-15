@@ -5,6 +5,9 @@ import Sidebar from './sidebar'
 import ScannerControls from './scanner-controls'
 import VideoTable from './video-table'
 import SurgeVideosPanel from './surge-videos-panel'
+import DailySurgeVideosCard from '../components/dashboard/DailySurgeVideosCard';
+import RecentCollectedVideosClient from '../components/dashboard/RecentCollectedVideosClient';
+
 
 type ChannelItem = {
   channel_id: string
@@ -241,8 +244,8 @@ export default function DashboardClient() {
           >
             <div style={sectionHeaderStyle}>
               <div>
-                <div style={sectionEyebrowStyle}>SYSTEM STATUS</div>
-                <h2 style={sectionTitleStyle}>운영 상태</h2>
+<DailySurgeVideosCard />
+
               </div>
 
               <span style={liveBadgeStyle}>LIVE</span>

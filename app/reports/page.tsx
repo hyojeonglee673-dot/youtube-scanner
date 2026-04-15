@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import Sidebar from '../components/sidebar'
+import DailySurgeVideosCard from '../components/DailySurgeVideosCard'
+import RecentCollectedVideosClient from '../components/RecentCollectedVideosClient'
+
 
 type ChannelItem = {
   channel_id: string
@@ -255,36 +258,7 @@ export default function ReportsPage() {
               ...(settings.highlightCards ? cardStrongStyle : {}),
             }}
           >
-            <div style={sectionEyebrowStyle}>SUMMARY REPORT</div>
-            <h2 style={sectionTitleStyle}>운영 요약</h2>
-
-            <div style={summaryListStyle}>
-              <SummaryRow
-                label="최근 스캔 시각"
-                value={loading ? '...' : stats.latestScan}
-              />
-              <SummaryRow
-                label="가장 활발한 채널"
-                value={loading ? '...' : stats.topChannel}
-              />
-              <SummaryRow
-                label="채널 커버리지"
-                value={loading ? '...' : `${stats.scannedChannels} / ${stats.totalChannels}`}
-              />
-              <SummaryRow
-                label="운영 상태"
-                value={loading ? '확인 중...' : '정상 운영'}
-              />
-            </div>
-
-            <div style={noteBoxStyle}>
-              <div style={noteTitleStyle}>리포트 메모</div>
-              <p style={noteTextStyle}>
-                Settings에서 저장한 표시 개수, 정렬 방식, 카드 강조 옵션이 이 페이지에도
-                반영됩니다.
-              </p>
-            </div>
-          </div>
+            <DailySurgeVideosCard />
 
           <div
             style={{

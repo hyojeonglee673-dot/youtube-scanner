@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import Sidebar from './sidebar'
+import DailySurgeVideosCard from '../components/DailySurgeVideosCard'
+import RecentCollectedVideosClient from '../components/RecentCollectedVideosClient'
+
 
 type ChannelItem = {
   channel_id: string
@@ -180,31 +183,7 @@ export default function ReportsPageClient() {
             <div style={sectionEyebrowStyle}>SUMMARY REPORT</div>
             <h2 style={sectionTitleStyle}>운영 요약</h2>
 
-            <div style={summaryListStyle}>
-              <div style={summaryRowStyle}>
-                <span style={summaryLabelStyle}>최근 스캔 시각</span>
-                <strong style={summaryValueStyle}>{loading ? '...' : stats.latestScan}</strong>
-              </div>
-
-              <div style={summaryRowStyle}>
-                <span style={summaryLabelStyle}>가장 활발한 채널</span>
-                <strong style={summaryValueStyle}>{loading ? '...' : stats.topChannel}</strong>
-              </div>
-
-              <div style={summaryRowStyle}>
-                <span style={summaryLabelStyle}>채널 커버리지</span>
-                <strong style={summaryValueStyle}>
-                  {loading ? '...' : `${stats.scannedChannels} / ${stats.totalChannels}`}
-                </strong>
-              </div>
-
-              <div style={summaryRowStyle}>
-                <span style={summaryLabelStyle}>운영 상태</span>
-                <strong style={{ ...summaryValueStyle, color: '#dc2626' }}>
-                  {loading ? '확인 중...' : '정상 운영'}
-                </strong>
-              </div>
-            </div>
+            <DailySurgeVideosCard />
 
             <div style={noteBoxStyle}>
               <div style={noteTitleStyle}>리포트 메모</div>

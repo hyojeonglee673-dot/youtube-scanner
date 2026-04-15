@@ -1,0 +1,308 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import RecentCollectedVideosClient from '../components/RecentCollectedVideosClient'
+
+
+type SurgeVideo = {
+  videoId: string
+  title: string
+  channelName: string
+  thumbnailUrl: string | null
+  youtubeUrl: string
+  currentViews: number
+  deltaToday: number
+  delta1h?: number | null
+  lastCapturedAt?: string | null
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat('ko-KR').format(value || 0)
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return '-'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '-'
+  return d.toLocaleString('ko-KR', {
+    hour12: false,
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function normalizeItem(item: any): SurgeVideo {
+  const videoId =
+    item.videoId ??
+    item.video_id ??
+    item.id ??
+    ''
+
+  const title = item.title ?? ''
+  const channelName =
+    item.channelName ??
+    item.channel_name ??
+    item.source_channel_name ??
+    ''
+
+  const thumbnailUrl =
+    item.thumbnailUrl ??
+    item.thumbnail_url ??
+    null
+
+  const youtubeUrl =
+    item.youtubeUrl ??
+    item.youtube_url ??
+    (videoId ? `https://www.youtube.com/watch?v=${videoId}` : '#')
+
+  const currentViews = Number(
+    item.currentViews ??
+      item.current_views ??
+      item.viewCount ??
+      item.view_count ??
+      0
+  )
+
+  const deltaToday = Number(
+    item.deltaToday ??
+      item.delta_today ??
+      item.todayDelta ??
+      item.today_delta ??
+      0
+  )
+
+  const delta1hRaw =
+    item.delta1h ??
+    item.delta_1h ??
+    item.hourDelta ??
+    item.hour_delta
+
+  const delta1h =
+    delta1hRaw === undefined || delta1hRaw === null
+      ? null
+      : Number(delta1hRaw)
+
+  const lastCapturedAt =
+    item.lastCapturedAt ??
+    item.last_captured_at ??
+    item.capturedHour ??
+    item.captured_hour ??
+    null
+
+  return {
+    videoId,
+    title,
+    channelName,
+    thumbnailUrl,
+    youtubeUrl,
+    currentViews,
+    deltaToday,
+    delta1h,
+    lastCapturedAt,
+  }
+}
+
+export default function DailySurgeVideosCard() {
+  const [items, setItems] = useState<SurgeVideo[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const res = await fetch(`/api/surge-videos?limit=5&t=${Date.now()}`, {
+        cache: 'no-store',
+      })
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`)
+      }
+
+      const data = await res.json()
+      const rawItems = Array.isArray(data?.items)
+        ? data.items
+        : Array.isArray(data)
+        ? data
+        : []
+
+      setItems(rawItems.map(normalizeItem))
+      setUpdatedAt(new Date().toISOString())
+    } catch (err: any) {
+      setError(err?.message ?? '급상승 영상 데이터를 불러오지 못했습니다.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const topItems = useMemo(() => items.slice(0, 5), [items])
+
+  return (
+    <div
+      style={{
+        background: '#111827',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 20,
+        padding: 20,
+        minHeight: 360,
+        color: '#fff',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 16,
+          gap: 12,
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 12, color: '#93c5fd', marginBottom: 6 }}>
+            SURGE WATCH
+          </div>
+          <h3 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>
+            당일 조회수 급상승 영상
+          </h3>
+          <p style={{ margin: '6px 0 0', color: '#9ca3af', fontSize: 13 }}>
+            오늘 기준으로 가장 빠르게 오르는 영상
+          </p>
+        </div>
+
+        <button
+          onClick={load}
+          style={{
+            border: 'none',
+            background: '#2563eb',
+            color: '#fff',
+            padding: '10px 14px',
+            borderRadius: 10,
+            cursor: 'pointer',
+            fontWeight: 700,
+          }}
+        >
+          새로고침
+        </button>
+      </div>
+
+      {loading ? (
+        <div style={{ color: '#9ca3af', padding: '24px 0' }}>불러오는 중...</div>
+      ) : error ? (
+        <div style={{ color: '#fca5a5', padding: '24px 0' }}>
+          급상승 데이터를 불러오지 못했습니다: {error}
+        </div>
+      ) : topItems.length === 0 ? (
+        <div style={{ color: '#9ca3af', padding: '24px 0' }}>
+          표시할 급상승 영상이 없습니다.
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 12 }}>
+          {topItems.map((item, index) => (
+            <a
+              key={item.videoId || `${item.title}-${index}`}
+              href={item.youtubeUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '84px 1fr auto',
+                gap: 12,
+                alignItems: 'center',
+                textDecoration: 'none',
+                color: 'inherit',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: 14,
+                padding: 10,
+              }}
+            >
+              <div
+                style={{
+                  width: 84,
+                  height: 48,
+                  borderRadius: 10,
+                  overflow: 'hidden',
+                  background: '#1f2937',
+                  flexShrink: 0,
+                }}
+              >
+                {item.thumbnailUrl ? (
+                  <img
+                    src={item.thumbnailUrl}
+                    alt={item.title}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : null}
+              </div>
+
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    color: '#93c5fd',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    marginBottom: 4,
+                  }}
+                >
+                  #{index + 1} {item.channelName}
+                </div>
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    lineHeight: 1.4,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={item.title}
+                >
+                  {item.title}
+                </div>
+                <div style={{ marginTop: 6, color: '#9ca3af', fontSize: 12 }}>
+                  최근 수집: {formatDateTime(item.lastCapturedAt)}
+                </div>
+              </div>
+
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 4 }}>
+                  현재 조회수
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 800 }}>
+                  {formatNumber(item.currentViews)}
+                </div>
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: item.deltaToday >= 0 ? '#34d399' : '#fca5a5',
+                  }}
+                >
+                  오늘 +{formatNumber(item.deltaToday)}
+                </div>
+                {typeof item.delta1h === 'number' && (
+                  <div style={{ marginTop: 4, fontSize: 12, color: '#93c5fd' }}>
+                    1시간 +{formatNumber(item.delta1h)}
+                  </div>
+                )}
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+
+      <div style={{ marginTop: 14, color: '#6b7280', fontSize: 12 }}>
+        업데이트: {updatedAt ? formatDateTime(updatedAt) : '-'}
+      </div>
+    </div>
+  )
+}
